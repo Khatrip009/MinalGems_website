@@ -24,7 +24,7 @@ base = base.replace(/\/api$/, "");
 export const API_BASE_URL = base + "/api";
 
 export const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:4500/api";
+  import.meta.env.VITE_API_BASE_URL="https://apiminalgems.exotech.co.in";
 
 // -----------------------------------------------------
 // VISITOR ID HANDLING
