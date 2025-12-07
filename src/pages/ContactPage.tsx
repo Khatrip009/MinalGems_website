@@ -1,17 +1,39 @@
-// src/pages/ContactPage.jsx
-import React, { useEffect, useState } from "react";
+// src/pages/ContactPage.tsx
+import React, {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import Container from "../components/layout/Container";
 import AnimatedSection from "../components/ui/AnimatedSection";
 import SectionTitle from "../components/ui/SectionTitle";
 import Button from "../components/ui/Button";
-import { Phone, Mail, MapPin, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { createLead } from "../api/leads.api";
 
-export default function ContactPage() {
+interface ContactForm {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  country: string;
+  product_interest: string;
+  message: string;
+}
+
+export default function ContactPage(): JSX.Element {
   const [searchParams] = useSearchParams();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ContactForm>({
     name: "",
     email: "",
     phone: "",
@@ -40,12 +62,14 @@ export default function ContactPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  function handleChange(e) {
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
@@ -57,9 +81,10 @@ export default function ContactPage() {
 
     try {
       setSubmitting(true);
-      const res = await createLead(form);
-      if (!res.ok) {
-        throw new Error(res.error || "Unable to submit your enquiry.");
+      const res: any = await createLead(form);
+
+      if (!res?.ok) {
+        throw new Error(res?.error || "Unable to submit your enquiry.");
       }
 
       setSuccessMsg(
@@ -107,8 +132,8 @@ export default function ContactPage() {
                 Send us an enquiry
               </h2>
               <p className="mb-6 text-base leading-relaxed text-slate-600">
-                Fill in the form and we’ll respond within one business day. For urgent
-                queries, you can reach us directly on WhatsApp or phone.
+                Fill in the form and we’ll respond within one business day. For
+                urgent queries, you can reach us directly on WhatsApp or phone.
               </p>
 
               {errorMsg && (
@@ -234,8 +259,8 @@ export default function ContactPage() {
                 <div className="pt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-slate-500 max-w-sm">
                     By submitting this form, you agree to be contacted by Minal
-                    Gems for your enquiry. We respect your privacy and do not share
-                    your details with third parties.
+                    Gems for your enquiry. We respect your privacy and do not
+                    share your details with third parties.
                   </p>
 
                   <Button

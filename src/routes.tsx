@@ -1,5 +1,5 @@
 // src/routes.tsx
-import { createBrowserRouter } from "react-router-dom";
+import { createHashRouter } from "react-router-dom";
 import App from "./App";
 
 import HomePage from "./pages/Home";
@@ -12,7 +12,7 @@ import WishlistPage from "./pages/WishlistPage";
 import ProfilePage from "./pages/ProfilePage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
-import OrderSuccessPage from "./pages/OrderSuccessPage"; // ✅ fixed spelling
+import OrderSuccessPage from "./pages/OrderSuccessPage";
 import GoldPage from "./pages/GoldPage";
 import ContactPage from "./pages/ContactPage";
 import DiamondPage from "./pages/DiamondPage";
@@ -21,7 +21,7 @@ import RegisterPage from "./pages/RegisterPage";
 import ProcessPage from "./pages/ProcessPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     path: "/",
     element: <App />,
@@ -70,7 +70,6 @@ const router = createBrowserRouter([
 
       // 404 Not Found
       { path: "*", element: <NotFoundPage /> },
-
     ],
   },
 ]);
