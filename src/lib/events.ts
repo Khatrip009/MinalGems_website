@@ -1,7 +1,7 @@
 // src/lib/events.ts
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "http://localhost:4500";
+  import.meta.env.VITE_API_URL || "https://apiminalgems.exotech.co.in";
 
 export function startEventStream(onMessage: (data: any) => void) {
   const topics = ["notifications", "orders", "new_arrivals"].join(",");
