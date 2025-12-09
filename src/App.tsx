@@ -9,7 +9,8 @@ import ScrollToTop from "./components/ScrollToTop";
 import useVisitorTracking from "./hooks/useVisitorTracking";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 import { startEventStream } from "./lib/events";
-import { startRealtimeToasts } from "./lib/realtime-toasts"; // if you have it
+import { startRealtimeToasts } from "./lib/toastSSE";
+ // if you have it
 
 export default function App() {
   // ---------------------------
