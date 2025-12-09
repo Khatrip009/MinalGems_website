@@ -4,10 +4,12 @@ import { Outlet } from "react-router-dom";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 
 import useVisitorTracking from "./hooks/useVisitorTracking";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 import { startEventStream } from "./lib/events";
+import { startRealtimeToasts } from "./lib/realtime-toasts"; // if you have it
 
 export default function App() {
   // ---------------------------
@@ -19,20 +21,26 @@ export default function App() {
   // 🔔 Start SSE real-time listener
   // ---------------------------
   useEffect(() => {
+    const toastStream = startRealtimeToasts?.(); // ensure optional fallback
+
     const sse = startEventStream((msg) => {
-      const stream = startRealtimeToasts();
-  return () => stream.close();
-
-
       console.log("🔔 SSE:", msg);
+
       // You can trigger toast or notifications here if needed
+      // Example: toast(msg.message)
     });
 
-    return () => sse.close();
+    return () => {
+      sse?.close();
+      toastStream?.close?.();
+    };
   }, []);
 
   return (
     <>
+      {/* Scroll to top on route changes */}
+      <ScrollToTop />
+
       {/* Cookie Consent Bar */}
       <CookieConsentBanner />
 

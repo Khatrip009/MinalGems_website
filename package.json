@@ -1,6 +1,7 @@
 {
   "name": "minalgems-website",
   "private": true,
+  "homepage": "https://minalgems.exotech.co.in/",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
