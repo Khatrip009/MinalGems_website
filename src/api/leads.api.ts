@@ -56,8 +56,8 @@ export interface LeadNotesResponse {
 }
 
 /* -------------------- Public create (contact form) -------------------- */
+/* POST /api/crm/leads */
 
-// For website contact / enquiry forms
 export interface CreateLeadPayload {
   name: string;
   email: string;
@@ -66,38 +66,41 @@ export interface CreateLeadPayload {
   country?: string;
   product_interest?: string;
   message?: string;
-  source?: string; // e.g. "contact_form", "landing_page", etc.
+  source?: string; // e.g. "contact_form", "landing_page"
 }
 
 export async function createLeadPublic(
   payload: CreateLeadPayload
 ): Promise<{ ok: boolean; lead?: Lead; error?: string }> {
-  return apiFetch("/leads", {
+  return apiFetch("/crm/leads", {
     method: "POST",
     body: payload,
   });
 }
 
 /* -------------------- Admin / Manager APIs -------------------- */
-/* All of these require a logged-in user with role_id 1 or 2 */
+/* Base: /api/crm/leads */
 
 export async function listLeads(
   params: ListLeadsParams = {}
 ): Promise<ListLeadsResponse> {
   const searchParams = new URLSearchParams();
+
   if (params.q) searchParams.set("q", params.q);
   if (params.status) searchParams.set("status", params.status);
   if (params.page) searchParams.set("page", String(params.page));
   if (params.limit) searchParams.set("limit", String(params.limit));
 
   const query = searchParams.toString();
-  const url = query ? `/leads?${query}` : "/leads";
+  const url = query ? `/crm/leads?${query}` : "/crm/leads";
 
   return apiFetch<ListLeadsResponse>(url, { method: "GET" });
 }
 
 export async function getLead(id: string): Promise<LeadDetailResponse> {
-  return apiFetch<LeadDetailResponse>(`/leads/${id}`, { method: "GET" });
+  return apiFetch<LeadDetailResponse>(`/crm/leads/${id}`, {
+    method: "GET",
+  });
 }
 
 export interface UpdateLeadPayload {
@@ -116,7 +119,7 @@ export async function updateLead(
   id: string,
   payload: UpdateLeadPayload
 ): Promise<LeadDetailResponse> {
-  return apiFetch<LeadDetailResponse>(`/leads/${id}`, {
+  return apiFetch<LeadDetailResponse>(`/crm/leads/${id}`, {
     method: "PUT",
     body: payload,
   });
@@ -125,17 +128,18 @@ export async function updateLead(
 export async function deleteLead(
   id: string
 ): Promise<{ ok: boolean; message?: string; error?: string }> {
-  return apiFetch(`/leads/${id}`, {
+  return apiFetch(`/crm/leads/${id}`, {
     method: "DELETE",
   });
 }
 
 /* -------------------- Notes APIs -------------------- */
+/* /api/crm/leads/:id/notes */
 
 export async function getLeadNotes(
   leadId: string
 ): Promise<LeadNotesResponse> {
-  return apiFetch<LeadNotesResponse>(`/leads/${leadId}/notes`, {
+  return apiFetch<LeadNotesResponse>(`/crm/leads/${leadId}/notes`, {
     method: "GET",
   });
 }
@@ -144,15 +148,11 @@ export async function addLeadNote(
   leadId: string,
   note: string
 ): Promise<{ ok: boolean; note?: LeadNote; error?: string }> {
-  return apiFetch(`/leads/${leadId}/notes`, {
+  return apiFetch(`/crm/leads/${leadId}/notes`, {
     method: "POST",
     body: { note },
   });
 }
 
-export async function createLead(payload) {
-  return apiFetch("/leads", {
-    method: "POST",
-    body: payload,
-  });
-}
+// Backward compatibility alias (public contact form)
+export const createLead = createLeadPublic;

@@ -1,6 +1,6 @@
 // src/api/cart.api.ts
 // =====================================================
-// CART API — Fetch, Add, Update, Remove Cart Items
+// CART API — Fully aligned with backend app.js
 // =====================================================
 
 import { apiFetch } from "./client";
@@ -8,51 +8,60 @@ import type { Cart } from "./types";
 
 // ---------------------------
 // GET CART
+// GET /api/cart
 // ---------------------------
 export async function getCart() {
-  // backend returns: { ok: boolean, cart: Cart | null }
   return apiFetch<{ ok: boolean; cart: Cart | null }>("/cart");
 }
 
 // ---------------------------
 // ADD TO CART
+// POST /api/cart
+// body: { product_id, quantity }
 // ---------------------------
-// backend expects body: { product_id, quantity }
-export async function addToCart(product_id: string, quantity: number = 1) {
-  return apiFetch<{ ok: boolean; cart: Cart }>("/cart/items", {
+export async function addToCart(
+  product_id: string,
+  quantity: number = 1
+) {
+  return apiFetch<{ ok: boolean; cart: Cart }>("/cart", {
     method: "POST",
-    body: { product_id, quantity }, // 👈 FIXED: quantity (not qty)
+    body: { product_id, quantity },
   });
 }
 
 // ---------------------------
 // UPDATE CART ITEM
+// PATCH /api/cart/:itemId
+// body: { quantity }
 // ---------------------------
-// backend route: PATCH /api/cart/items/:itemId
-export async function updateCartItem(itemId: string, quantity: number) {
-  return apiFetch<{ ok: boolean; cart: Cart }>("/cart/items/" + itemId, {
-    method: "PATCH",                // 👈 FIXED: PATCH (not PUT)
-    body: { quantity },             // 👈 quantity
+export async function updateCartItem(
+  itemId: string,
+  quantity: number
+) {
+  return apiFetch<{ ok: boolean; cart: Cart }>(`/cart/${itemId}`, {
+    method: "PATCH",
+    body: { quantity },
   });
 }
 
 // ---------------------------
 // REMOVE CART ITEM
+// DELETE /api/cart/:itemId
 // ---------------------------
-// backend returns { ok, cart }
 export async function removeCartItem(itemId: string) {
-  return apiFetch<{ ok: boolean; cart: Cart }>("/cart/items/" + itemId, {
+  return apiFetch<{ ok: boolean; cart: Cart }>(`/cart/${itemId}`, {
     method: "DELETE",
   });
 }
 
 // ---------------------------
-// ATTACH ANONYMOUS CART TO USER
+// ATTACH ANONYMOUS CART
+// POST /api/cart/attach
+// body: { anon_cart_id }
 // ---------------------------
-// backend cart-attach router is mounted as POST /api/cart/attach
 export async function attachAnonymousCart(anonCartId: string) {
   return apiFetch<{ ok: boolean }>("/cart/attach", {
     method: "POST",
-    body: { anon_cart_id: anonCartId }, // correct body key
+    body: { anon_cart_id: anonCartId },
   });
 }

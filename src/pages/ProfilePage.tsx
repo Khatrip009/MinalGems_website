@@ -40,7 +40,7 @@ import Skeleton from "../components/ui/Skeleton";
 
 import { AuthContext } from "../context/AuthContext";
 import { CartContext } from "../context/CartContext";
-import { apiFetch, API_BASE } from "../api/client";
+import {  apiFetch } from "../api/client";
 import { getWishlist, removeFromWishlist } from "../api/wishlist.api";
 import {
   getAccountOverview,
@@ -242,7 +242,8 @@ export default function ProfilePage() {
         // Public profile (for avatar, bio, etc.)
         try {
           const profileMe = await apiFetch<{ ok: boolean; profile: any }>(
-            "/profile/me",
+            "/system/profile/me"
+,
             { method: "GET" }
           );
 
@@ -261,7 +262,7 @@ export default function ProfilePage() {
         // Addresses
         setLoadingAddresses(true);
         const addrRes = await apiFetch<AddressesResponse>(
-          "/customer/addresses",
+          "/customer-addresses",
           { method: "GET" }
         );
         if (!cancelled && addrRes.ok) {
@@ -314,57 +315,36 @@ export default function ProfilePage() {
    * Avatar
    * ======================================================= */
 
-  async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    const formData = new FormData();
-    formData.append("avatar", file);
+  const formData = new FormData();
+  formData.append("avatar", file);
 
-    try {
-      setAvatarUploading(true);
+  try {
+    setAvatarUploading(true);
 
-      // Use same token strategy as apiFetch
-      const token = localStorage.getItem("auth_token");
-
-      const res = await fetch(`${API_BASE}/profile/avatar`, {
+    const res = await apiFetch<{ ok: boolean; avatar_url?: string }>(
+      "/system/profile/avatar",
+      {
         method: "POST",
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-              // DO NOT set Content-Type manually for FormData
-            }
-          : undefined,
         body: formData,
-        credentials: "include",
-      });
-
-      const text = await res.text();
-      let data: any = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        // non-JSON error body
-        data = {};
       }
+    );
 
-      if (!res.ok || !data.ok) {
-        console.error("Avatar upload failed:", res.status, data);
-        alert("Could not upload avatar. Please try again.");
-        return;
-      }
-
-      if (data.avatar_url) {
-        setAvatarUrl(data.avatar_url);
-      }
-    } catch (err) {
-      console.error("Avatar upload error:", err);
-      alert("Could not upload avatar. Please try again.");
-    } finally {
-      setAvatarUploading(false);
-      e.target.value = "";
+    if (res.ok && res.avatar_url) {
+      setAvatarUrl(res.avatar_url);
     }
+  } catch (err) {
+    console.error("Avatar upload error:", err);
+    alert("Could not upload avatar. Please try again.");
+  } finally {
+    setAvatarUploading(false);
+    e.target.value = "";
   }
+}
+
 
   /* =========================================================
    * Profile
@@ -527,7 +507,7 @@ export default function ProfilePage() {
 
       if (addressEditingId) {
         const res = await apiFetch<{ ok: boolean; address: Address }>(
-          `/customer/addresses/${addressEditingId}`,
+          `/customer-addresses/${addressEditingId}`,
           {
             method: "PUT",
             body: payload,
@@ -540,7 +520,7 @@ export default function ProfilePage() {
         }
       } else {
         const res = await apiFetch<{ ok: boolean; address: Address }>(
-          "/customer/addresses",
+          "/customer-addresses",
           {
             method: "POST",
             body: payload,
@@ -564,7 +544,7 @@ export default function ProfilePage() {
     if (!window.confirm("Delete this address?")) return;
 
     try {
-      await apiFetch<{ ok: boolean }>(`/customer/addresses/${id}`, {
+      await apiFetch<{ ok: boolean }>(`/customer-addresses/${id}`, {
         method: "DELETE",
       });
       setAddresses((prev) => prev.filter((a) => a.id !== id));
@@ -580,7 +560,7 @@ export default function ProfilePage() {
   async function handleSetDefaultShipping(id: string) {
     try {
       await apiFetch<{ ok: boolean }>(
-        `/customer/addresses/${id}/default-shipping`,
+        `/customer-addresses/${id}/default-shipping`,
         { method: "POST" }
       );
     } catch (err) {
@@ -597,7 +577,7 @@ export default function ProfilePage() {
   async function handleSetDefaultBilling(id: string) {
     try {
       await apiFetch<{ ok: boolean }>(
-        `/customer/addresses/${id}/default-billing`,
+        `/customer-addresses/${id}/default-billing`,
         { method: "POST" }
       );
     } catch (err) {

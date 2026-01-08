@@ -1,6 +1,10 @@
 // src/api/wishlist.api.ts
 import { apiFetch } from "./client";
 
+/* =====================================================
+ * TYPES
+ * ===================================================== */
+
 export interface WishlistItem {
   id: string;
   product_id: string;
@@ -44,59 +48,89 @@ interface WishlistEventDetail {
   delta?: number;
 }
 
+/* =====================================================
+ * EVENTS
+ * ===================================================== */
+
 /** Fire a browser event so Header (and others) can react in real-time */
 function emitWishlistEvent(detail: WishlistEventDetail) {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent<WishlistEventDetail>("wishlist:updated", { detail }));
+  window.dispatchEvent(
+    new CustomEvent<WishlistEventDetail>("wishlist:updated", { detail })
+  );
 }
 
-/** GET /api/wishlist */
-export async function getWishlist() {
-  const res = await apiFetch<WishlistResponse>("/wishlist");
+/* =====================================================
+ * API CALLS
+ * Base: /api/sales/wishlist
+ * ===================================================== */
 
-  if (res && (res as any).ok && (res as any).wishlist?.items) {
-    const count = (res as any).wishlist.items.length;
-    emitWishlistEvent({ kind: "set", count });
+/**
+ * GET /api/sales/wishlist
+ */
+export async function getWishlist() {
+  const res = await apiFetch<WishlistResponse>("/sales/wishlist");
+
+  if (res?.ok && res.wishlist?.items) {
+    emitWishlistEvent({
+      kind: "set",
+      count: res.wishlist.items.length,
+    });
   }
 
   return res;
 }
 
-/** POST /api/wishlist/add  (body: { product_id }) */
+/**
+ * POST /api/sales/wishlist
+ * body: { product_id }
+ */
 export async function addToWishlist(product_id: string) {
-  const res = await apiFetch<AddToWishlistResponse>("/wishlist/add", {
+  if (!product_id) {
+    throw new Error("product_id_required");
+  }
+
+  const res = await apiFetch<AddToWishlistResponse>("/sales/wishlist", {
     method: "POST",
     body: { product_id },
   });
 
-  if (res && res.ok && !res.already_exists) {
-    // Assume +1 new item
+  if (res.ok && !res.already_exists) {
     emitWishlistEvent({ kind: "add", delta: 1 });
   }
 
   return res;
 }
 
-/** DELETE /api/wishlist/remove/:item_id */
+/**
+ * DELETE /api/sales/wishlist/:item_id
+ */
 export async function removeFromWishlist(itemId: string) {
-  const res = await apiFetch<RemoveFromWishlistResponse>(`/wishlist/remove/${itemId}`, {
-    method: "DELETE",
-  });
+  if (!itemId) {
+    throw new Error("wishlist_item_id_required");
+  }
 
-  if (res && res.ok) {
+  const res = await apiFetch<RemoveFromWishlistResponse>(
+    `/sales/wishlist/${itemId}`,
+    { method: "DELETE" }
+  );
+
+  if (res.ok) {
     emitWishlistEvent({ kind: "remove", delta: 1 });
   }
 
   return res;
 }
 
-/** DELETE /api/wishlist/clear */
+/**
+ * DELETE /api/sales/wishlist
+ */
 export async function clearWishlist() {
-  const res = await apiFetch<ClearWishlistResponse>("/wishlist/clear", {
+  const res = await apiFetch<ClearWishlistResponse>("/sales/wishlist", {
     method: "DELETE",
   });
 
-  if (res && res.ok) {
+  if (res.ok) {
     emitWishlistEvent({ kind: "clear" });
   }
 

@@ -6,7 +6,7 @@ export default function ProductGrid() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:4500/api/products")
+    fetch("https://apiminalgems.exotech.co.in/api/masters/products")
       .then(res => res.json())
       .then(data => {
         setProducts(data?.data || []);

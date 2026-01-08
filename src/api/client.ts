@@ -1,12 +1,5 @@
 // =====================================================
-// CLIENT API — Core HTTP Wrapper for All Frontend APIs
-// =====================================================
-//
-// ENV examples:
-//   VITE_API_BASE_URL = "http://localhost:4500"
-//   VITE_API_BASE_URL = "http://localhost:4500/api"
-//   VITE_API_BASE_URL = "https://apiminalgems.exotech.co.in"
-// All will normalize to: <base>/api
+// CLIENT API — Core HTTP Wrapper (FIXED)
 // =====================================================
 
 // -----------------------------------------------------
@@ -14,7 +7,6 @@
 // -----------------------------------------------------
 let base = (import.meta.env.VITE_API_BASE_URL || "").trim();
 
-// Fallback if env is missing
 if (!base) {
   base = "https://apiminalgems.exotech.co.in";
 }
@@ -22,17 +14,14 @@ if (!base) {
 // Remove trailing slashes
 base = base.replace(/\/+$/, "");
 
-// Remove existing /api to avoid duplicate /api/api
+// Remove existing /api
 base = base.replace(/\/api$/, "");
 
-// Final base ALWAYS ends with /api
+// FINAL BASE — ALWAYS /api
 export const API_BASE_URL = `${base}/api`;
 
-export const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://localhost:4500/api";
-
 // -----------------------------------------------------
-// VISITOR ID HANDLING
+// VISITOR ID
 // -----------------------------------------------------
 function getVisitorId(): string {
   try {
@@ -43,7 +32,6 @@ function getVisitorId(): string {
     }
     return id;
   } catch {
-    // If localStorage not available
     return "anonymous";
   }
 }
@@ -63,9 +51,7 @@ export function setToken(token: string | null) {
   try {
     if (token) localStorage.setItem("auth_token", token);
     else localStorage.removeItem("auth_token");
-  } catch {
-    // ignore storage errors
-  }
+  } catch {}
 }
 
 // -----------------------------------------------------
@@ -77,39 +63,40 @@ function buildUrl(path: string): string {
 }
 
 // -----------------------------------------------------
-// MAIN API FETCH WRAPPER
+// MAIN FETCH WRAPPER
 // -----------------------------------------------------
-//
-// NOTE: `options` is intentionally typed as `any` to avoid
-// fighting with RequestInit.body vs our typed payloads in TS.
 export async function apiFetch<T>(
   path: string,
   options: any = {}
 ): Promise<T> {
   const url = buildUrl(path);
+  const method = (options.method || "GET").toUpperCase();
 
-  // Start from any existing headers passed in
   const headers = new Headers(options.headers || {});
 
-  // Ensure JSON content-type unless caller overrides intentionally
-  if (!headers.has("Content-Type")) {
+  // Set JSON header ONLY when body is plain object
+  const isFormData = options.body instanceof FormData;
+
+  if (!headers.has("Content-Type") && options.body && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
 
-  // Add JWT token
+  // Auth token
   const token = getToken();
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Always include visitor ID
+  // Visitor ID (analytics)
   headers.set("x-visitor-id", getVisitorId());
 
-  // Body handling — we accept plain objects and strings
+  // Body handling
   let bodyToSend: any = undefined;
-  if (options.body !== undefined) {
-    bodyToSend =
-      typeof options.body === "string"
+
+  if (options.body !== undefined && method !== "GET") {
+    bodyToSend = isFormData
+      ? options.body
+      : typeof options.body === "string"
         ? options.body
         : JSON.stringify(options.body);
   }
@@ -119,26 +106,24 @@ export async function apiFetch<T>(
   try {
     response = await fetch(url, {
       ...options,
-      // Always send cookies (for session-based or mixed auth)
+      method,
       credentials: "include",
       headers,
       body: bodyToSend,
     });
   } catch (err) {
     console.error("🌐 Network error:", err);
-    throw new Error("Network error — please check your internet or server.");
+    throw new Error("network_error");
   }
 
-  // Parse JSON safely
-  let data: any;
+  let data: any = null;
   try {
     data = await response.json();
   } catch {
-    console.warn("⚠ API did not return JSON:", url);
-    throw new Error("Invalid JSON response from server");
+    throw new Error("invalid_json_response");
   }
 
-  // Handle expired session
+  // Unauthorized → force logout
   if (response.status === 401) {
     setToken(null);
     try {
@@ -149,8 +134,10 @@ export async function apiFetch<T>(
 
   // Other errors
   if (!response.ok) {
-    // If backend returns { ok:false, error:"..." }
-    throw new Error(data?.error || "API request failed");
+    const err = new Error(data?.error || "api_error") as any;
+    err.status = response.status;
+    err.payload = data;
+    throw err;
   }
 
   return data as T;

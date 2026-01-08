@@ -11,7 +11,21 @@ export interface Category {
   product_count?: number;
 }
 
-export async function fetchCategories() {
+// ------------------------------------
+// GET CATEGORIES
+// GET /api/masters/categories
+// ------------------------------------
+export async function fetchCategories(params?: {
+  page?: number;
+  limit?: number;
+  include_counts?: boolean;
+}) {
+  const query = new URLSearchParams({
+    ...(params?.page && { page: String(params.page) }),
+    ...(params?.limit && { limit: String(params.limit) }),
+    ...(params?.include_counts && { include_counts: "true" }),
+  }).toString();
+
   return apiFetch<{
     ok: boolean;
     categories: Category[];
@@ -19,5 +33,5 @@ export async function fetchCategories() {
     limit: number;
     total: number;
     total_pages: number;
-  }>("/categories?include_counts=true");
+  }>(`/masters/categories${query ? `?${query}` : ""}`);
 }

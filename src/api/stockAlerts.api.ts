@@ -1,7 +1,12 @@
 // src/api/stockAlerts.api.ts
 import { apiFetch } from "./client";
 
-interface StockAlertResponse {
+/* =====================================================
+ * STOCK ALERTS API
+ * Base: /api/stock-alerts
+ * ===================================================== */
+
+export interface StockAlertResponse {
   ok: boolean;
   alert_id?: string;
   status?: string;
@@ -13,7 +18,15 @@ interface StockAlertResponse {
   };
 }
 
+/**
+ * POST /api/stock-alerts/register
+ * Register a back-in-stock alert for a product
+ */
 export async function registerStockAlert(productId: string) {
+  if (!productId) {
+    throw new Error("product_id_required");
+  }
+
   return apiFetch<StockAlertResponse>("/stock-alerts/register", {
     method: "POST",
     body: {

@@ -4,10 +4,13 @@ import { apiFetch } from "./client";
 export const VISITOR_SESSION_KEY = "mg_visitor_session_id";
 export const VISITOR_ID_KEY = "mg_visitor_id";
 
+/* =====================================================
+ * Helpers
+ * ===================================================== */
+
 /** Always create a non-UUID-looking session id */
 function createRandomId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    // Prefix breaks the UUID regex on the backend
     return "sess-" + crypto.randomUUID();
   }
   return `sess-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
@@ -22,22 +25,19 @@ export function getOrCreateVisitorSessionId(): string {
     const id = createRandomId();
     window.localStorage.setItem(VISITOR_SESSION_KEY, id);
 
-    // Also drop a simple cookie (optional)
+    // Optional cookie
     try {
       const oneYear = 60 * 60 * 24 * 365;
       document.cookie = `mg_session=${id}; path=/; max-age=${oneYear}; SameSite=Lax`;
-    } catch {
-      /* ignore */
-    }
+    } catch {}
 
     return id;
   } catch {
-    // Fallback if localStorage fails
     return createRandomId();
   }
 }
 
-/** Read stored visitor UUID (set after /identify) */
+/** Read stored visitor UUID (after identify) */
 export function getStoredVisitorId(): string | null {
   try {
     return window.localStorage.getItem(VISITOR_ID_KEY);
@@ -46,38 +46,51 @@ export function getStoredVisitorId(): string | null {
   }
 }
 
+/* =====================================================
+ * API Calls
+ * ===================================================== */
+
 /**
- * POST /api/visitors/identify
- * Upserts the visitor row using session_id
+ * POST /api/analytics/visitors/identify
+ * Upserts visitor using session_id
  */
-export async function identifyVisitor(meta?: Record<string, unknown>) {
+export async function identifyVisitor(
+  meta?: Record<string, unknown>
+) {
   const session_id = getOrCreateVisitorSessionId();
 
-  const payload: any = { session_id };
-  if (meta) payload.meta = meta;
-
-  const res = await apiFetch<{ visitor_id: string }>("/visitors/identify", {
+  const res = await apiFetch<{
+    ok: boolean;
+    visitor_id: string;
+  }>("/analytics/visitors/identify", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: {
+      session_id,
+      ...(meta ? { meta } : {}),
+    },
   });
 
-  try {
-    window.localStorage.setItem(VISITOR_ID_KEY, res.visitor_id);
-  } catch {
-    /* ignore */
+  if (res.ok && res.visitor_id) {
+    try {
+      window.localStorage.setItem(VISITOR_ID_KEY, res.visitor_id);
+    } catch {}
   }
 
   return res.visitor_id;
 }
 
 /**
- * Track an analytics event.
- * Uses visitor_id if known, otherwise session_id.
+ * POST /api/analytics/visitors/event
+ * Track analytics event
  */
 export async function trackVisitorEvent(
   event_type: string,
   event_props?: Record<string, unknown>
 ) {
+  if (!event_type) {
+    throw new Error("event_type_required");
+  }
+
   const session_id = getOrCreateVisitorSessionId();
   const visitor_id = getStoredVisitorId() || undefined;
 
@@ -85,22 +98,23 @@ export async function trackVisitorEvent(
     ok: boolean;
     visitor_id: string;
     event_id: string | null;
-  }>("/visitors/event", {
+  }>("/analytics/visitors/event", {
     method: "POST",
-    body: JSON.stringify({
+    body: {
       visitor_id,
       session_id,
       event_type,
       event_props: event_props || {},
-    }),
+    },
   });
 }
 
 /**
- * Convenience: ensure we have visitor_id in DB & localStorage.
+ * Convenience: ensure visitor is identified.
  * Call once on app startup.
  */
-export async function initVisitorTracking(meta?: Record<string, unknown>) {
-  const visitorId = await identifyVisitor(meta);
-  return visitorId;
+export async function initVisitorTracking(
+  meta?: Record<string, unknown>
+) {
+  return identifyVisitor(meta);
 }

@@ -6,7 +6,7 @@ const API_BASE =
 export function startEventStream(onMessage: (data: any) => void) {
   const topics = ["notifications", "orders", "new_arrivals"].join(",");
 
-  const url = `${API_BASE}/api/events/sse?topics=${topics}`;
+  const url = `${API_BASE}/api/system/events/sse?topics=${topics}`;
 
   console.log("🔗 Connecting to SSE:", url);
 

@@ -1,5 +1,5 @@
 // =======================================
-// COOKIE CONSENT API
+// COOKIE CONSENT API — FIXED
 // =======================================
 
 import { apiFetch } from "./client";
@@ -14,15 +14,18 @@ export interface CookieConsent {
 }
 
 /**
- * POST /api/cookie-consent
+ * POST /api/cookie-consents
  * Save cookie consent for a visitor.
  */
 export async function submitCookieConsent(
   visitorId: string,
   consent: CookieConsent
 ) {
-  return apiFetch<{ ok: boolean; id: string }>("/cookie-consent", {
+  return apiFetch<{ ok: boolean; id: string }>("/cookie-consents", {
     method: "POST",
-    body: { visitor_id: visitorId, consent }, // DO NOT stringify — client.ts handles it
+    body: {
+      visitor_id: visitorId,
+      consent,
+    },
   });
 }
