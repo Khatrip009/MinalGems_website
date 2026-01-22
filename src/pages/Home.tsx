@@ -25,32 +25,30 @@ useEffect(() => {
       setLoading(true);
 
       const [productsRes, categoriesRes] = await Promise.all([
-        getProducts(),
+        // ✅ IMPORTANT: use public list endpoint
+        getProducts("/list/all"),
         fetchCategories(),
       ]);
 
       if (productsRes.ok) {
-        const normalizedProducts: Product[] = (productsRes.products || []).map(
-          (p) => ({
-            ...p,
-            is_published: true,
-            assets: p.primary_image
-              ? [
-                  {
-                    id: "primary",
-                    asset_type: "image",
-                    url: p.primary_image,
-                    filename: "primary.jpg",   // ✅ must be string
-                    file_type: "image/jpeg",   // ✅ must be string
-                    sort_order: 0,
-                    is_primary: true,
-                  },
-                ]
-              : [],
-          })
-        );
+        const normalized: Product[] = productsRes.products.map((p) => ({
+          ...p,
+          assets: p.primary_image
+            ? [
+                {
+                  id: "primary",
+                  asset_type: "image",
+                  url: p.primary_image,
+                  filename: "primary.jpg",
+                  file_type: "image/jpeg",
+                  sort_order: 0,
+                  is_primary: true,
+                },
+              ]
+            : [],
+        }));
 
-        setProducts(normalizedProducts);
+        setProducts(normalized);
       } else {
         setProducts([]);
       }
@@ -58,6 +56,7 @@ useEffect(() => {
       setCategories(categoriesRes.categories || []);
     } catch (err) {
       console.error("Failed to load products or categories:", err);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -65,6 +64,7 @@ useEffect(() => {
 
   fetchData();
 }, []);
+
 
 // Map category slug/name to image path (fallbacks included)
   const getCategoryImage = (slug?: string | null, name?: string | null) => {
