@@ -249,8 +249,9 @@ export default function Footer() {
                   Contact
                 </h6>
                 <div className="mt-4 space-y-4 text-lg text-slate-700">
-                  <div className="flex items-start gap-3">
-                    
+                  
+
+                  
 
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-pink-500" />
