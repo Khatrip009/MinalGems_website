@@ -19,27 +19,47 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   // Load products + categories
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
+useEffect(() => {
+  async function fetchData() {
+    try {
+      setLoading(true);
 
-        const [productsRes, categoriesRes] = await Promise.all([
-          getProducts(),
-          fetchCategories(),
-        ]);
+      const [productsRes, categoriesRes] = await Promise.all([
+        getProducts(),
+        fetchCategories(),
+      ]);
 
-        setProducts(productsRes.ok ? productsRes.products : []);
-        setCategories(categoriesRes.categories || []);
-      } catch (err) {
-        console.error("Failed to load products or categories:", err);
-      } finally {
-        setLoading(false);
+      if (productsRes.ok) {
+        const normalizedProducts = (productsRes.products || []).map((p) => ({
+          ...p,
+          assets: p.primary_image
+            ? [
+                {
+                  id: "primary",
+                  asset_type: "image",
+                  url: p.primary_image,
+                  is_primary: true,
+                },
+              ]
+            : [],
+        }));
+
+        setProducts(normalizedProducts);
+      } else {
+        setProducts([]);
       }
-    }
 
-    fetchData();
-  }, []);
+      setCategories(categoriesRes.categories || []);
+    } catch (err) {
+      console.error("Failed to load products or categories:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  fetchData();
+}, []);
+
 
   // Map category slug/name to image path (fallbacks included)
   const getCategoryImage = (slug?: string | null, name?: string | null) => {
