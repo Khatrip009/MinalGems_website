@@ -1,20 +1,15 @@
-// src/pages/ProductDetailPage.tsx
-
 import React, { useEffect, useState, useContext, useMemo } from "react";
-import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
   Heart,
-  HeartOff,
   Bell,
-  AlertTriangle,
   CheckCircle2,
   Package,
 } from "lucide-react";
 
 import Container from "../components/layout/Container";
 import AnimatedSection from "../components/ui/AnimatedSection";
-import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import SectionTitle from "../components/ui/SectionTitle";
 import PriceTag from "../components/product/PriceTag";
@@ -35,14 +30,13 @@ import {
 } from "../api/wishlist.api";
 
 import { registerPushForCurrentVisitor } from "../api/push.api";
-import { registerStockAlert } from "../api/stockAlerts.api";
-
-// ⭐ TOAST ADDED
 import { toast } from "react-hot-toast";
 
-// Extend Product type locally
+/* ---------------- TYPES ---------------- */
+
 type ProductWithStock = Product & {
   available_qty?: number | null;
+  assets?: ProductAsset[];
 };
 
 interface ProductResponse {
@@ -59,6 +53,8 @@ interface WishlistItemLite {
   id: string;
   product_id: string;
 }
+
+/* ---------------- COMPONENT ---------------- */
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -82,51 +78,67 @@ export default function ProductDetailPage() {
   const addCartItem = cartCtx?.addItem || (async () => {});
   const isLoggedIn = !!auth?.isLoggedIn;
 
-  // -------------------------------
-  // Load product
-  // -------------------------------
+  /* ---------------- LOAD PRODUCT ---------------- */
+
   useEffect(() => {
     if (!slug) return;
 
     let cancelled = false;
 
-    async function load() {
+    async function loadProduct() {
       try {
         setLoading(true);
         setError(null);
 
-        const prodRes = await apiFetch<ProductResponse>(`/products/${slug}`);
-        if (!prodRes.ok || !prodRes.product) throw new Error("Product not found");
-        if (!cancelled) setProduct(prodRes.product);
+        /* Product detail */
+        const prodRes = await apiFetch<ProductResponse>(
+          `/masters/products/${slug}`
+        );
 
-        // Suggested products
-        const listRes = await apiFetch<ProductsListResponse>("/products");
+        if (!prodRes.ok || !prodRes.product) {
+          throw new Error("Product not found");
+        }
+
+        if (cancelled) return;
+        setProduct(prodRes.product);
+
+        /* Suggested products (same category) */
+        const listRes = await apiFetch<ProductsListResponse>(
+          "/masters/products"
+        );
+
         if (listRes.ok && !cancelled) {
           const suggestions = listRes.products
-            .filter((p) => p.slug !== slug)
+            .filter(
+              (p) =>
+                p.slug !== slug &&
+                p.category_id === prodRes.product.category_id
+            )
             .slice(0, 8);
+
           setSuggested(suggestions);
         }
       } catch (err: any) {
-        if (!cancelled) setError(err?.message || "Failed to load product");
+        if (!cancelled) {
+          setError(err?.message || "Failed to load product");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    load();
+    loadProduct();
     return () => {
       cancelled = true;
     };
   }, [slug]);
 
-  // -------------------------------
-  // Wishlist sync
-  // -------------------------------
+  /* ---------------- WISHLIST SYNC ---------------- */
+
   useEffect(() => {
     if (!product || !isLoggedIn) return;
 
-    async function loadWishlist() {
+    async function syncWishlist() {
       try {
         const res = await getWishlist();
         if (!res.ok) return;
@@ -134,27 +146,25 @@ export default function ProductDetailPage() {
         const match = res.wishlist.items.find(
           (i: WishlistItemLite) => i.product_id === product.id
         );
+
         setWishlistItemId(match ? match.id : null);
       } catch {}
     }
 
-    loadWishlist();
+    syncWishlist();
   }, [product, isLoggedIn]);
 
-  // -------------------------------
-  // Gallery
-  // -------------------------------
-  const imageAssets: ProductAsset[] = useMemo(() => {
-    return product?.assets?.filter((a) => a.asset_type === "image") || [];
-  }, [product]);
+  /* ---------------- GALLERY ---------------- */
 
-  const primaryImage = useMemo(() => {
-    return (
-      imageAssets.find((a) => a.is_primary) ||
-      imageAssets[0] ||
-      null
-    );
-  }, [imageAssets]);
+  const imageAssets: ProductAsset[] = useMemo(
+    () => product?.assets?.filter((a) => a.asset_type === "image") || [],
+    [product]
+  );
+
+  const primaryImage = useMemo(
+    () => imageAssets.find((a) => a.is_primary) || imageAssets[0] || null,
+    [imageAssets]
+  );
 
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
 
@@ -162,26 +172,24 @@ export default function ProductDetailPage() {
     if (primaryImage) setActiveImageId(primaryImage.id);
   }, [primaryImage?.id]);
 
-  const activeImage = useMemo(() => {
-    return (
+  const activeImage = useMemo(
+    () =>
       imageAssets.find((a) => a.id === activeImageId) ||
       primaryImage ||
-      null
-    );
-  }, [imageAssets, activeImageId, primaryImage]);
+      null,
+    [imageAssets, activeImageId, primaryImage]
+  );
 
-  // -------------------------------
-  // Stock helpers
-  // -------------------------------
+  /* ---------------- STOCK ---------------- */
+
   const availableQty = product?.available_qty ?? null;
-  const inStock = typeof availableQty === "number" ? availableQty > 0 : true;
+  const inStock =
+    typeof availableQty === "number" ? availableQty > 0 : true;
 
-  // -------------------------------
-  // Handlers
-  // -------------------------------
+  /* ---------------- ACTIONS ---------------- */
+
   async function handleAddToCart() {
     if (!product || !inStock) return;
-
     try {
       await addCartItem(product.id, 1);
       toast.success("Added to cart");
@@ -240,9 +248,7 @@ export default function ProductDetailPage() {
     }
   }
 
-  // -------------------------------
-  // RENDER
-  // -------------------------------
+  /* ---------------- RENDER ---------------- */
 
   if (loading && !product) {
     return (
@@ -275,10 +281,9 @@ export default function ProductDetailPage() {
 
   return (
     <>
-      {/* ---------------- MAIN SECTION ---------------- */}
+      {/* MAIN */}
       <AnimatedSection className="bg-slate-50 py-12">
         <Container>
-          {/* Back button */}
           <button
             onClick={() => navigate(-1)}
             className="text-sm text-slate-500 hover:text-rose-500"
@@ -288,7 +293,7 @@ export default function ProductDetailPage() {
           </button>
 
           <div className="grid gap-12 mt-8 lg:grid-cols-2">
-            {/* ---------------- LEFT: GALLERY ---------------- */}
+            {/* GALLERY */}
             <div>
               <div className="rounded-2xl overflow-hidden shadow border border-slate-200">
                 {activeImage ? (
@@ -309,7 +314,6 @@ export default function ProductDetailPage() {
                   {imageAssets.map((img) => (
                     <button
                       key={img.id}
-                      type="button"
                       onClick={() => setActiveImageId(img.id)}
                       className={`h-20 w-20 rounded-xl overflow-hidden border ${
                         img.id === activeImageId
@@ -327,16 +331,14 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* ---------------- RIGHT: DETAILS ---------------- */}
+            {/* DETAILS */}
             <div className="space-y-5">
-              <h1 className="font-['Playfair_Display'] text-4xl font-semibold text-slate-900">
+              <h1 className="font-['Playfair_Display'] text-4xl font-semibold">
                 {product.title}
               </h1>
 
               {product.short_description && (
-                <p className="text-base text-slate-600">
-                  {product.short_description}
-                </p>
+                <p className="text-slate-600">{product.short_description}</p>
               )}
 
               <RatingStars rating={4.7} count={32} />
@@ -347,11 +349,9 @@ export default function ProductDetailPage() {
                 per="piece"
               />
 
-              {/* Buttons */}
               <div className="flex flex-wrap gap-3 mt-4">
                 <Button
                   variant="primary"
-                  className="text-sm px-6 py-3"
                   disabled={!inStock}
                   onClick={handleAddToCart}
                 >
@@ -360,27 +360,22 @@ export default function ProductDetailPage() {
 
                 <Button
                   variant="outline"
-                  className="flex items-center gap-2 text-sm px-5 py-3"
                   onClick={handleToggleWishlist}
                   disabled={wishlistLoading}
                 >
-                  {wishlistItemId ? (
-                    <>
-                      <Heart className="h-5 w-5 fill-pink-500 text-pink-500" />
-                      In Wishlist
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="h-5 w-5" />
-                      Add to Wishlist
-                    </>
-                  )}
+                  <Heart
+                    className={`h-5 w-5 ${
+                      wishlistItemId
+                        ? "fill-pink-500 text-pink-500"
+                        : ""
+                    }`}
+                  />
+                  {wishlistItemId ? "In Wishlist" : "Add to Wishlist"}
                 </Button>
 
                 {!inStock && (
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 text-sm px-5 py-3"
                     onClick={handleNotifyMe}
                     disabled={notifyLoading || notifySubscribed}
                   >
@@ -399,35 +394,33 @@ export default function ProductDetailPage() {
                 )}
               </div>
 
-              {/* Description & meta */}
-              <div className="rounded-xl border bg-white shadow p-5 space-y-4 text-base text-slate-700">
+              <div className="rounded-xl border bg-white shadow p-5 space-y-4">
                 {product.description && (
                   <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="text-xs font-semibold uppercase text-slate-500">
                       Description
                     </div>
-                    <p className="mt-1 whitespace-pre-line">{product.description}</p>
+                    <p className="mt-1 whitespace-pre-line">
+                      {product.description}
+                    </p>
                   </div>
                 )}
 
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="text-xs font-semibold uppercase text-slate-500">
                       Product Details
                     </div>
                     <ul className="mt-1 space-y-1">
-                      <li>SKU: {product.id.slice(0, 8).toUpperCase()}</li>
+                      <li>SKU: {product.sku || product.id.slice(0, 8)}</li>
                       {availableQty !== null && (
-                        <li>Available Qty: {Math.max(availableQty, 0)}</li>
-                      )}
-                      {product.trade_type && (
-                        <li>Trade: {product.trade_type.toUpperCase()}</li>
+                        <li>Available Qty: {availableQty}</li>
                       )}
                     </ul>
                   </div>
 
                   <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="text-xs font-semibold uppercase text-slate-500">
                       Shipping & Care
                     </div>
                     <ul className="mt-1 space-y-1">
@@ -442,7 +435,7 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <p className="text-[12px] text-slate-500">
+              <p className="text-xs text-slate-500">
                 Note: Images are for representation only.
               </p>
             </div>
@@ -450,7 +443,7 @@ export default function ProductDetailPage() {
         </Container>
       </AnimatedSection>
 
-      {/* ---------------- SUGGESTED ---------------- */}
+      {/* SUGGESTED */}
       <AnimatedSection className="py-14 bg-white">
         <Container>
           <SectionTitle
@@ -464,7 +457,9 @@ export default function ProductDetailPage() {
             loading={false}
             onViewProduct={(slug) => navigate(`/products/${slug}`)}
             onAddToCart={(id) =>
-              addCartItem(id, 1).then(() => toast.success("Added to cart"))
+              addCartItem(id, 1).then(() =>
+                toast.success("Added to cart")
+              )
             }
           />
         </Container>
