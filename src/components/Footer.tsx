@@ -250,31 +250,15 @@ export default function Footer() {
                 </h6>
                 <div className="mt-4 space-y-4 text-lg text-slate-700">
                   <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-pink-500" />
-                    <p>
-                      33, Sant Tukaram Society-2,
-                      <br />
-                      Surat, Gujarat, India
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-pink-500" />
-                    <a
-                      href="tel:+917069785900"
-                      className="hover:text-pink-500"
-                    >
-                      +91 70697 85900
-                    </a>
-                  </div>
+                    
 
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-pink-500" />
                     <a
-                      href="mailto:khatrip.009@gmail.com"
+                      href="mailto:info@minalgem.com"
                       className="hover:text-pink-500"
                     >
-                      khatrip.009@gmail.com
+                      info@minalgem.com
                     </a>
                   </div>
                 </div>
