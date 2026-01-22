@@ -30,19 +30,25 @@ useEffect(() => {
       ]);
 
       if (productsRes.ok) {
-        const normalizedProducts = (productsRes.products || []).map((p) => ({
-          ...p,
-          assets: p.primary_image
-            ? [
-                {
-                  id: "primary",
-                  asset_type: "image",
-                  url: p.primary_image,
-                  is_primary: true,
-                },
-              ]
-            : [],
-        }));
+        const normalizedProducts: Product[] = (productsRes.products || []).map(
+          (p) => ({
+            ...p,
+            is_published: true,
+            assets: p.primary_image
+              ? [
+                  {
+                    id: "primary",
+                    asset_type: "image",
+                    url: p.primary_image,
+                    filename: "primary.jpg",   // ✅ must be string
+                    file_type: "image/jpeg",   // ✅ must be string
+                    sort_order: 0,
+                    is_primary: true,
+                  },
+                ]
+              : [],
+          })
+        );
 
         setProducts(normalizedProducts);
       } else {
@@ -60,8 +66,7 @@ useEffect(() => {
   fetchData();
 }, []);
 
-
-  // Map category slug/name to image path (fallbacks included)
+// Map category slug/name to image path (fallbacks included)
   const getCategoryImage = (slug?: string | null, name?: string | null) => {
     const key = (slug || name || "").toLowerCase();
 
