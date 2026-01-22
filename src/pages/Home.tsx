@@ -29,7 +29,7 @@ export default function HomePage() {
           fetchCategories(),
         ]);
 
-        setProducts(productsRes.products || productsRes.items || []);
+        setProducts(productsRes.ok ? productsRes.products : []);
         setCategories(categoriesRes.categories || []);
       } catch (err) {
         console.error("Failed to load products or categories:", err);
@@ -175,7 +175,7 @@ export default function HomePage() {
             <ProductGrid
               products={products}
               loading={loading}
-              onViewProduct={(slug) => navigate(`/product/${slug}`)}
+              onViewProduct={(slug) => navigate(`/products/${slug}`)}
               onAddToCart={(id) => console.log("Add to cart", id)}
               onToggleWishlist={(id) => console.log("Toggle wishlist", id)}
             />
