@@ -34,49 +34,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ----------------------
-  // Restore session on mount
-  // ----------------------
+  // ------------------------------------
+  // Hydrate auth state from localStorage
+  // ------------------------------------
   useEffect(() => {
-    let cancelled = false;
-
-    async function restoreSession() {
+    const cached = localStorage.getItem("auth_user");
+    if (cached) {
       try {
-        setIsLoading(true);
-        const res = await refresh(); // POST /auth/refresh
-
-        if (!cancelled && res.ok && res.user) {
-          setUser(res.user);
-          setIsLoggedIn(true);
-
-          // keep latest token + user in localStorage
-          if (res.token) {
-            localStorage.setItem("auth_token", res.token);
-          }
-          localStorage.setItem("auth_user", JSON.stringify(res.user));
-        } else if (!cancelled) {
-          setUser(null);
-          setIsLoggedIn(false);
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("refresh session failed:", err);
-          setUser(null);
-          setIsLoggedIn(false);
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
+        const parsed = JSON.parse(cached);
+        setUser(parsed);
+        setIsLoggedIn(true);
+      } catch {
+        // ignore corrupt cache
       }
     }
-
-    restoreSession();
-    return () => {
-      cancelled = true;
-    };
+    setIsLoading(false);
   }, []);
 
   // ----------------------

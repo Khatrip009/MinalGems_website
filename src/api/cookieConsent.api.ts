@@ -1,4 +1,3 @@
-// src/api/cookieConsent.api.ts
 import { apiFetch } from "./client";
 
 /* =====================================================
@@ -15,11 +14,6 @@ export interface CookieConsent {
   [key: string]: unknown;
 }
 
-export interface CookieConsentResponse {
-  ok: boolean;
-  id: string;
-}
-
 /**
  * POST /api/cookie-consents
  * Save cookie consent for a visitor
@@ -27,12 +21,12 @@ export interface CookieConsentResponse {
 export async function submitCookieConsent(
   visitorId: string,
   consent: CookieConsent
-): Promise<CookieConsentResponse> {
+): Promise<{ ok: boolean; id: string }> {
   if (!visitorId) {
     throw new Error("visitor_id_required");
   }
 
-  return apiFetch<CookieConsentResponse>("/cookie-consents", {
+  return apiFetch<{ ok: boolean; id: string }>("/cookie-consents", {
     method: "POST",
     body: {
       visitor_id: visitorId,

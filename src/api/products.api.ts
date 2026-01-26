@@ -11,10 +11,11 @@ import type { Product, ProductAsset } from "./types";
  * GET /api/masters/products
  * Supports optional query string (?q=, ?category=, etc.)
  */
-export async function getProducts(query: string = "") {
-  return apiFetch<{ ok: boolean; products: Product[] }>(
-    `/masters/products${query}`
-  );
+export async function getProducts(query = "") {
+  return apiFetch<{
+    ok: boolean;
+    products: Product[];
+  }>(`/masters/products${query}`);
 }
 
 /**
@@ -23,9 +24,10 @@ export async function getProducts(query: string = "") {
 export async function getProductBySlug(slug: string) {
   if (!slug) throw new Error("product_slug_required");
 
-  return apiFetch<{ ok: boolean; product: Product }>(
-    `/masters/products/${slug}`
-  );
+  return apiFetch<{
+    ok: boolean;
+    product: Product;
+  }>(`/masters/products/${slug}`);
 }
 
 /**
@@ -34,12 +36,12 @@ export async function getProductBySlug(slug: string) {
 export async function getProductAssets(id: string) {
   if (!id) throw new Error("product_id_required");
 
-  return apiFetch<{ ok: boolean; assets: ProductAsset[] }>(
-    `/masters/products/${id}/assets`
-  );
+  return apiFetch<{
+    ok: boolean;
+    assets: ProductAsset[];
+  }>(`/masters/products/${id}/assets`);
 }
 
 // Backward compatibility aliases
 export const fetchProducts = getProducts;
 export const fetchProductBySlug = getProductBySlug;
-

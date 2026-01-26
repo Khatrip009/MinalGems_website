@@ -1,11 +1,18 @@
 // src/context/CartContext.tsx
-import React, { createContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+
 import {
   getCart,
   addToCart,
   updateCartItem,
   removeCartItem,
 } from "../api/cart.api";
+
 import type { Cart } from "../api/types";
 
 interface CartContextValue {
@@ -21,13 +28,15 @@ export const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Load cart initially
-  async function refreshCart() {
+  /* ----------------------------------------
+     LOAD CART (INITIAL / MANUAL REFRESH)
+  ----------------------------------------- */
+  const refreshCart = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getCart(); // { ok, cart }
+      const res = await getCart();
       if (res.ok) {
         setCart(res.cart);
       } else {
@@ -39,47 +48,65 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  // Add item
-  async function addItem(product_id: string, quantity: number = 1) {
-    try {
-      const res = await addToCart(product_id, quantity); // { ok, cart }
-      if (res.ok) {
-        setCart(res.cart);
+  /* ----------------------------------------
+     ADD ITEM
+  ----------------------------------------- */
+  const addItem = useCallback(
+    async (product_id: string, quantity: number = 1) => {
+      try {
+        const res = await addToCart(product_id, quantity);
+        if (res.ok) {
+          setCart(res.cart);
+        }
+      } catch (err) {
+        console.error("addItem failed:", err);
       }
-    } catch (err) {
-      console.error("addItem failed:", err);
-    }
-  }
+    },
+    []
+  );
 
-  // Update quantity
-  async function updateItemQty(itemId: string, quantity: number) {
-    try {
-      const res = await updateCartItem(itemId, quantity); // { ok, cart }
-      if (res.ok) {
-        setCart(res.cart);
+  /* ----------------------------------------
+     UPDATE ITEM QUANTITY
+  ----------------------------------------- */
+  const updateItemQty = useCallback(
+    async (itemId: string, quantity: number) => {
+      try {
+        const res = await updateCartItem(itemId, quantity);
+        if (res.ok) {
+          setCart(res.cart);
+        }
+      } catch (err) {
+        console.error("updateItemQty failed:", err);
       }
-    } catch (err) {
-      console.error("updateItemQty failed:", err);
-    }
-  }
+    },
+    []
+  );
 
-  // Remove item
-  async function removeItem(itemId: string) {
-    try {
-      const res = await removeCartItem(itemId); // { ok, cart }
-      if (res.ok) {
-        setCart(res.cart);
+  /* ----------------------------------------
+     REMOVE ITEM
+  ----------------------------------------- */
+  const removeItem = useCallback(
+    async (itemId: string) => {
+      try {
+        const res = await removeCartItem(itemId);
+        if (res.ok) {
+          setCart(res.cart);
+        }
+      } catch (err) {
+        console.error("removeItem failed:", err);
       }
-    } catch (err) {
-      console.error("removeItem failed:", err);
-    }
-  }
+    },
+    []
+  );
 
+  /* ----------------------------------------
+     INITIAL LOAD
+  ----------------------------------------- */
   useEffect(() => {
     refreshCart();
-  }, []);
+  }, [refreshCart]);
 
   return (
     <CartContext.Provider

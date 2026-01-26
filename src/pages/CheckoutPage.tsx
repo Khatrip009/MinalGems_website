@@ -228,7 +228,7 @@ export default function CheckoutPage() {
         await refreshCart();
 
         const addrRes = await apiFetch<{ ok: boolean; addresses: Address[] }>(
-          "/customer/addresses",
+          "/customer-addresses",
           { method: "GET" }
         );
         if (!cancelled && addrRes.ok) {

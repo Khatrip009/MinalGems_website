@@ -2,40 +2,42 @@
 import { apiFetch } from "./client";
 
 /* =====================================================
- * PROFILE
+ * CUSTOMER / PROFILE
  * ===================================================== */
 
 /**
- * GET /api/system/profile
+ * GET /api/system/profile/me
+ * (Fetch logged-in customer profile)
  */
-export async function getProfile() {
-  return apiFetch("/system/profile");
+export async function getCustomer() {
+  return apiFetch("/system/profile/me");
 }
 
 /**
  * PUT /api/system/profile
+ * (Update customer profile)
  */
-export async function updateProfile(data: any) {
+export async function updateCustomer(data: any) {
   return apiFetch("/system/profile", {
     method: "PUT",
     body: data,
   });
 }
 
+/* -----------------------------------------------------
+ * Aliases (safe)
+ * ----------------------------------------------------- */
+export const getProfile = getCustomer;
+export const updateProfile = updateCustomer;
+
 /* =====================================================
  * CUSTOMER ADDRESSES
  * ===================================================== */
 
-/**
- * GET /api/customer-addresses
- */
 export async function getCustomerAddresses() {
   return apiFetch("/customer-addresses");
 }
 
-/**
- * POST /api/customer-addresses
- */
 export async function createAddress(data: any) {
   return apiFetch("/customer-addresses", {
     method: "POST",
@@ -43,9 +45,6 @@ export async function createAddress(data: any) {
   });
 }
 
-/**
- * PUT /api/customer-addresses/:id
- */
 export async function updateAddress(id: string, data: any) {
   return apiFetch(`/customer-addresses/${id}`, {
     method: "PUT",
@@ -53,9 +52,6 @@ export async function updateAddress(id: string, data: any) {
   });
 }
 
-/**
- * DELETE /api/customer-addresses/:id
- */
 export async function deleteAddress(id: string) {
   return apiFetch(`/customer-addresses/${id}`, {
     method: "DELETE",

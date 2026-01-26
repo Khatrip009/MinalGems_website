@@ -1,62 +1,87 @@
 // src/pages/ProfilePage.tsx
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useContext,
-  ChangeEvent,
-  FormEvent,
-} from "react";
+
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   User as UserIcon,
-  Shield,
   MapPin,
   Heart,
-  ShoppingBag,
-  Truck,
-  KeyRound,
-  PackageSearch,
-  Globe2,
-  Phone,
-  Mail,
-  Calendar,
   Plus,
   Trash2,
   Edit3,
-  Star,
   Loader2,
+  Save,
+  Mail,
+  Phone,
+  Building,
+  Globe,
+  Map,
+  Camera,
+  Package,
+  Settings,
+  LogOut,
+  ChevronRight,
+  User,
+  Lock,
+  Bell,
+  Calendar,
+  Award,
+  Sparkles,
+  Gem,
+  X,
+  Home,
+  Briefcase,
+  Globe as Earth,
+  Shield,
+  CreditCard,
+  ShoppingBag,
+  Clock,
+  Star,
+  Check,
   AlertCircle,
-  CheckCircle2,
+  Upload,
+  MapPin as MapPinIcon,
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import Container from "../components/layout/Container";
-import AnimatedSection from "../components/ui/AnimatedSection";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
-import SectionTitle from "../components/ui/SectionTitle";
 import Skeleton from "../components/ui/Skeleton";
+import Card from "../components/ui/Card";
+import Input from "../components/ui/Input";
+import Textarea from "../components/ui/Textarea";
+import Avatar from "../components/ui/Avatar";
 
 import { AuthContext } from "../context/AuthContext";
-import { CartContext } from "../context/CartContext";
-import {  apiFetch } from "../api/client";
-import { getWishlist, removeFromWishlist } from "../api/wishlist.api";
 import {
-  getAccountOverview,
-  getProfile,
-  updateProfile,
-  changePassword,
-  getOrderTimeline,
-  type UserProfile,
-  type AccountOverviewResponse,
+  getMyProfile,
+  upsertProfile,
+  uploadAvatar,
+  type Profile,
 } from "../api/account.api";
+import {
+  getCustomer,
+  updateCustomer,
+  getCustomerAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  type Customer,
+} from "../api/customer.api";
+import {
+  getWishlist,
+  removeFromWishlist,
+  type WishlistItem,
+} from "../api/wishlist.api";
+import { getNotifications } from "../api/notifications.api";
 
-type TabId = "overview" | "profile" | "addresses" | "orders" | "wishlist";
+/* ======================================================
+   TYPES
+====================================================== */
 
 interface Address {
   id: string;
-  customer_id: string;
   label: string | null;
   full_name: string | null;
   phone: string | null;
@@ -68,1719 +93,1137 @@ interface Address {
   country: string;
   is_default_billing: boolean;
   is_default_shipping: boolean;
-  metadata?: any;
 }
 
-interface AddressesResponse {
-  ok: boolean;
-  addresses: Address[];
-}
-
-interface OrdersListResponse {
-  ok: boolean;
-  orders: any[];
-}
-
-interface OrderTimelineEntry {
+interface Notification {
   id: string;
-  from_status: string | null;
-  to_status: string;
-  note: string | null;
-  changed_at: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
 }
 
-interface WishlistItem {
-  id: string;
-  product_id: string;
-  product_title?: string;
-  product_slug?: string;
-  product_primary_image?: string;
-  product_price?: number;
-  product_currency?: string;
-  product?: any;
-}
-
-type TabDef = { id: TabId; label: string; icon: React.ReactNode };
-
-const tabDefs: TabDef[] = [
-  { id: "overview", label: "Overview", icon: <UserIcon className="h-4 w-4" /> },
-  {
-    id: "profile",
-    label: "Profile & Security",
-    icon: <Shield className="h-4 w-4" />,
-  },
-  { id: "addresses", label: "Addresses", icon: <MapPin className="h-4 w-4" /> },
-  { id: "orders", label: "Orders", icon: <ShoppingBag className="h-4 w-4" /> },
-  { id: "wishlist", label: "Wishlist", icon: <Heart className="h-4 w-4" /> },
-];
-
-function formatDate(d?: string | null): string {
-  if (!d) return "-";
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return d;
-  return dt.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function humanStatus(status: string | null | undefined): string {
-  if (!status) return "-";
-  return status.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
-}
-
-/* =========================================================
- * Main Profile Page
- * ======================================================= */
-
-export default function ProfilePage() {
-  const navigate = useNavigate();
-  const auth = useContext(AuthContext);
-  const cartCtx = useContext(CartContext);
-
-  const isLoggedIn = !!auth?.isLoggedIn;
-  const authLoading = !!auth?.isLoading;
-
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
-
-  const [overview, setOverview] = useState<AccountOverviewResponse | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
-
-  const [loadingOverview, setLoadingOverview] = useState(true);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [loadingAddresses, setLoadingAddresses] = useState(true);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [loadingWishlist, setLoadingWishlist] = useState(true);
-
-  const [error, setError] = useState<string | null>(null);
-
-  const [timelineByOrderId, setTimelineByOrderId] = useState<
-    Record<string, OrderTimelineEntry[]>
-  >({});
-  const [timelineLoadingId, setTimelineLoadingId] = useState<string | null>(null);
-  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
-
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  const [profileForm, setProfileForm] = useState({
-    full_name: "",
-    phone: "",
-    dob: "",
-  });
-  const [profileSaving, setProfileSaving] = useState(false);
-
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: "",
-    new_password: "",
-    confirm_password: "",
-  });
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-
-  const [addressEditingId, setAddressEditingId] = useState<string | null>(null);
-  const [addressForm, setAddressForm] = useState({
-    label: "",
-    full_name: "",
-    phone: "",
-    line1: "",
-    line2: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    country: "",
-    is_default_billing: false,
-    is_default_shipping: false,
-  });
-  const [addressSaving, setAddressSaving] = useState(false);
-  const [addressError, setAddressError] = useState<string | null>(null);
-
-  const refreshCart = cartCtx?.refreshCart || (async () => {});
-
-  /* ---------- Redirect if not logged in ---------- */
-  useEffect(() => {
-    if (!authLoading && !isLoggedIn) {
-      navigate(`/login?next=${encodeURIComponent("/profile")}`, {
-        replace: true,
-      });
-    }
-  }, [authLoading, isLoggedIn, navigate]);
-
-  /* ---------- Initial load ---------- */
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    let cancelled = false;
-
-    async function loadAll() {
-      try {
-        setError(null);
-
-        // Overview
-        setLoadingOverview(true);
-        const overviewRes = await getAccountOverview();
-        if (!cancelled && overviewRes.ok) {
-          setOverview(overviewRes);
-        }
-
-        // Profile (core account)
-        setLoadingProfile(true);
-        const profileRes = await getProfile();
-        if (!cancelled && profileRes.ok) {
-          setProfile(profileRes.user);
-          setProfileForm({
-            full_name: profileRes.user.full_name || "",
-            phone: profileRes.user.phone || "",
-            dob: profileRes.user.dob || "",
-          });
-        }
-
-        // Public profile (for avatar, bio, etc.)
-        try {
-          const profileMe = await apiFetch<{ ok: boolean; profile: any }>(
-            "/system/profile/me"
-,
-            { method: "GET" }
-          );
-
-          if (
-            !cancelled &&
-            profileMe.ok &&
-            profileMe.profile &&
-            profileMe.profile.avatar_url
-          ) {
-            setAvatarUrl(profileMe.profile.avatar_url);
-          }
-        } catch (e) {
-          console.warn("[ProfilePage] /profile/me load failed:", e);
-        }
-
-        // Addresses
-        setLoadingAddresses(true);
-        const addrRes = await apiFetch<AddressesResponse>(
-          "/customer-addresses",
-          { method: "GET" }
-        );
-        if (!cancelled && addrRes.ok) {
-          setAddresses(addrRes.addresses || []);
-        }
-
-        // Orders
-        setLoadingOrders(true);
-        const ordersRes = await apiFetch<OrdersListResponse>("/orders/my", {
-          method: "GET",
-        });
-        if (!cancelled && ordersRes.ok) {
-          setOrders(ordersRes.orders || []);
-        }
-
-        // Wishlist
-        setLoadingWishlist(true);
-        const wlRes = await getWishlist();
-        if (
-          !cancelled &&
-          wlRes.ok &&
-          wlRes.wishlist &&
-          Array.isArray(wlRes.wishlist.items)
-        ) {
-          setWishlist(wlRes.wishlist.items as WishlistItem[]);
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          console.error("[ProfilePage] load error:", err);
-          setError("Something went wrong while loading your account.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingOverview(false);
-          setLoadingProfile(false);
-          setLoadingAddresses(false);
-          setLoadingOrders(false);
-          setLoadingWishlist(false);
-        }
-      }
-    }
-
-    loadAll();
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoggedIn]);
-
-  /* =========================================================
-   * Avatar
-   * ======================================================= */
-
-async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append("avatar", file);
-
-  try {
-    setAvatarUploading(true);
-
-    const res = await apiFetch<{ ok: boolean; avatar_url?: string }>(
-      "/system/profile/avatar",
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    if (res.ok && res.avatar_url) {
-      setAvatarUrl(res.avatar_url);
-    }
-  } catch (err) {
-    console.error("Avatar upload error:", err);
-    alert("Could not upload avatar. Please try again.");
-  } finally {
-    setAvatarUploading(false);
-    e.target.value = "";
-  }
-}
-
-
-  /* =========================================================
-   * Profile
-   * ======================================================= */
-
-  function handleProfileInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setProfileForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function handleProfileSave(e: FormEvent) {
-    e.preventDefault();
-    try {
-      setProfileSaving(true);
-      const res = await updateProfile({
-        full_name: profileForm.full_name,
-        phone: profileForm.phone,
-        dob: profileForm.dob || undefined,
-      });
-      if (res.ok) {
-        setProfile(res.user);
-        const overviewRes = await getAccountOverview();
-        if (overviewRes.ok) setOverview(overviewRes);
-      }
-    } catch (err) {
-      console.error("Profile save error:", err);
-    } finally {
-      setProfileSaving(false);
-    }
-  }
-
-  /* =========================================================
-   * Password
-   * ======================================================= */
-
-  function handlePasswordInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target;
-    setPasswordForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function handlePasswordSave(e: FormEvent) {
-    e.preventDefault();
-    setPasswordMessage(null);
-    setPasswordError(null);
-
-    if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setPasswordError("New password and confirmation do not match.");
-      return;
-    }
-    if (passwordForm.new_password.length < 6) {
-      setPasswordError("New password should be at least 6 characters long.");
-      return;
-    }
-
-    try {
-      setPasswordSaving(true);
-      const res: any = await changePassword({
-        current_password: passwordForm.current_password,
-        new_password: passwordForm.new_password,
-      });
-
-      if (!res.ok) {
-        setPasswordError(
-          res.error === "invalid_current_password"
-            ? "Current password is incorrect."
-            : "Unable to update password. Please try again."
-        );
-      } else {
-        setPasswordMessage("Password updated successfully.");
-        setPasswordForm({
-          current_password: "",
-          new_password: "",
-          confirm_password: "",
-        });
-      }
-    } catch (err) {
-      console.error("Password update error:", err);
-      setPasswordError("Unexpected error while updating password.");
-    } finally {
-      setPasswordSaving(false);
-    }
-  }
-
-  /* =========================================================
-   * Addresses
-   * ======================================================= */
-
-  function startNewAddress() {
-    setAddressEditingId(null);
-    setAddressForm({
-      label: "",
-      full_name: profileForm.full_name || "",
-      phone: profileForm.phone || "",
-      line1: "",
-      line2: "",
-      city: "",
-      state: "",
-      postal_code: "",
-      country: "",
-      is_default_billing: false,
-      is_default_shipping: false,
-    });
-    setAddressError(null);
-  }
-
-  function startEditAddress(addr: Address) {
-    setAddressEditingId(addr.id);
-    setAddressForm({
-      label: addr.label || "",
-      full_name: addr.full_name || "",
-      phone: addr.phone || "",
-      line1: addr.line1,
-      line2: addr.line2 || "",
-      city: addr.city,
-      state: addr.state || "",
-      postal_code: addr.postal_code || "",
-      country: addr.country,
-      is_default_billing: addr.is_default_billing,
-      is_default_shipping: addr.is_default_shipping,
-    });
-    setAddressError(null);
-  }
-
-  function handleAddressChange(
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) {
-    const { name, value, type, checked } = e.target as any;
-    if (type === "checkbox") {
-      setAddressForm((prev) => ({ ...prev, [name]: checked }));
-    } else {
-      setAddressForm((prev) => ({ ...prev, [name]: value }));
-    }
-  }
-
-  async function handleAddressSave(e: FormEvent) {
-    e.preventDefault();
-    setAddressError(null);
-
-    if (!addressForm.line1 || !addressForm.city || !addressForm.country) {
-      setAddressError("Address line, city, and country are required.");
-      return;
-    }
-
-    try {
-      setAddressSaving(true);
-
-      const payload = {
-        label: addressForm.label || null,
-        full_name: addressForm.full_name || null,
-        phone: addressForm.phone || null,
-        line1: addressForm.line1,
-        line2: addressForm.line2 || null,
-        city: addressForm.city,
-        state: addressForm.state || null,
-        postal_code: addressForm.postal_code || null,
-        country: addressForm.country,
-        is_default_billing: addressForm.is_default_billing,
-        is_default_shipping: addressForm.is_default_shipping,
-      };
-
-      if (addressEditingId) {
-        const res = await apiFetch<{ ok: boolean; address: Address }>(
-          `/customer-addresses/${addressEditingId}`,
-          {
-            method: "PUT",
-            body: payload,
-          }
-        );
-        if (res.ok) {
-          setAddresses((prev) =>
-            prev.map((a) => (a.id === res.address.id ? res.address : a))
-          );
-        }
-      } else {
-        const res = await apiFetch<{ ok: boolean; address: Address }>(
-          "/customer-addresses",
-          {
-            method: "POST",
-            body: payload,
-          }
-        );
-        if (res.ok) {
-          setAddresses((prev) => [res.address, ...prev]);
-        }
-      }
-
-      startNewAddress();
-    } catch (err) {
-      console.error("Address save error:", err);
-      setAddressError("Unable to save address right now.");
-    } finally {
-      setAddressSaving(false);
-    }
-  }
-
-  async function handleAddressDelete(id: string) {
-    if (!window.confirm("Delete this address?")) return;
-
-    try {
-      await apiFetch<{ ok: boolean }>(`/customer-addresses/${id}`, {
-        method: "DELETE",
-      });
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
-      if (addressEditingId === id) {
-        startNewAddress();
-      }
-    } catch (err) {
-      console.error("Address delete error:", err);
-      setAddressError("Unable to delete address.");
-    }
-  }
-
-  async function handleSetDefaultShipping(id: string) {
-    try {
-      await apiFetch<{ ok: boolean }>(
-        `/customer-addresses/${id}/default-shipping`,
-        { method: "POST" }
-      );
-    } catch (err) {
-      console.error("Set default shipping error:", err);
-    }
-    setAddresses((prev) =>
-      prev.map((a) => ({
-        ...a,
-        is_default_shipping: a.id === id,
-      }))
-    );
-  }
-
-  async function handleSetDefaultBilling(id: string) {
-    try {
-      await apiFetch<{ ok: boolean }>(
-        `/customer-addresses/${id}/default-billing`,
-        { method: "POST" }
-      );
-    } catch (err) {
-      console.error("Set default billing error:", err);
-    }
-    setAddresses((prev) =>
-      prev.map((a) => ({
-        ...a,
-        is_default_billing: a.id === id,
-      }))
-    );
-  }
-
-  /* =========================================================
-   * Orders
-   * ======================================================= */
-
-  async function handleToggleOrderTimeline(orderId: string) {
-    const isOpen = openOrderId === orderId;
-    if (isOpen) {
-      setOpenOrderId(null);
-      return;
-    }
-
-    if (!timelineByOrderId[orderId]) {
-      try {
-        setTimelineLoadingId(orderId);
-        const res = await getOrderTimeline(orderId);
-        if (res.ok) {
-          setTimelineByOrderId((prev) => ({
-            ...prev,
-            [orderId]: res.timeline || [],
-          }));
-        }
-      } catch (err) {
-        console.error("Order timeline load error:", err);
-      } finally {
-        setTimelineLoadingId(null);
-      }
-    }
-
-    setOpenOrderId(orderId);
-  }
-
-  /* =========================================================
-   * Wishlist
-   * ======================================================= */
-
-  async function handleMoveWishlistToCart(item: WishlistItem) {
-    try {
-      const addItem = cartCtx?.addItem || (async () => {});
-      await addItem(item.product_id, 1);
-      await removeFromWishlist(item.id);
-      setWishlist((prev) => prev.filter((w) => w.id !== item.id));
-      await refreshCart();
-    } catch (err) {
-      console.error("Move to cart failed:", err);
-    }
-  }
-
-  async function handleRemoveWishlistItem(id: string) {
-    try {
-      await removeFromWishlist(id);
-      setWishlist((prev) => prev.filter((w) => w.id !== id));
-    } catch (err) {
-      console.error("Remove wishlist item error:", err);
-    }
-  }
-
-  /* =========================================================
-   * Derived
-   * ======================================================= */
-
-  const displayUser = useMemo<UserProfile | null>(() => {
-    return profile || overview?.user || null;
-  }, [profile, overview]);
-
-  const displayAvatar =
-    avatarUrl ||
-    (displayUser && displayUser.metadata && displayUser.metadata.avatar_url);
-
-  /* =========================================================
-   * Renderers
-   * ======================================================= */
-
-  function renderOverview() {
-    if (loadingOverview || !overview) {
-      return (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-2xl" />
-          ))}
-        </div>
-      );
-    }
-
-    const stats = overview.stats;
-
-    return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={<ShoppingBag className="h-5 w-5" />}
-            label="Total Orders"
-            value={stats.orders_count}
-            hint={
-              stats.last_order_at
-                ? `Last on ${formatDate(stats.last_order_at)}`
-                : "No orders yet"
-            }
-          />
-          <StatCard
-            icon={<Heart className="h-5 w-5" />}
-            label="Wishlist"
-            value={stats.wishlist_count}
-            hint="Saved items you love"
-          />
-          <StatCard
-            icon={<MapPin className="h-5 w-5" />}
-            label="Saved Addresses"
-            value={stats.addresses_count}
-            hint="Shipping & billing"
-          />
-          <StatCard
-            icon={<PackageSearch className="h-5 w-5" />}
-            label="Cart Total"
-            value={stats.cart_grand_total}
-            isCurrency
-            hint="Current cart value"
-          />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Contact */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-900/5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 text-rose-500">
-                  <UserIcon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Account Details
-                  </p>
-                  <p className="text-[14px] text-slate-400">
-                    Your core contact & identity
-                  </p>
-                </div>
-              </div>
-              {displayUser?.is_verified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-medium text-emerald-700">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Verified
-                </span>
-              )}
-            </div>
-
-            <div className="grid gap-4 text-[16px] text-slate-700 sm:grid-cols-2">
-              <div className="space-y-1">
-                <p className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                  <UserIcon className="h-4 w-4" />
-                  Name
-                </p>
-                <p>{displayUser?.full_name || "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </p>
-                <p>{displayUser?.email || "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                  <Phone className="h-4 w-4" />
-                  Phone
-                </p>
-                <p>{displayUser?.phone || "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                  <Calendar className="h-4 w-4" />
-                  Date of Birth
-                </p>
-                <p>{displayUser?.dob ? formatDate(displayUser.dob) : "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                  <Shield className="h-4 w-4" />
-                  KYC Status
-                </p>
-                <p>{humanStatus(displayUser?.kyc_status)}</p>
-              </div>
-            </div>
-
-            <div className="mt-5 text-[14px] text-slate-400">
-              You can update these from the{" "}
-              <button
-                type="button"
-                className="font-medium text-rose-500 underline-offset-2 hover:underline"
-                onClick={() => setActiveTab("profile")}
+type TabId = "profile" | "contact" | "addresses" | "wishlist" | "settings" | "notifications";
+
+/* ======================================================
+   COMPONENTS
+====================================================== */
+
+const ProfileHeader = React.memo(function ProfileHeader({
+  user,
+  profile,
+  customer,
+  avatarUploading,
+  onAvatarChange,
+}: {
+  user: any;
+  profile: Profile | null;
+  customer: Customer | null;
+  avatarUploading: boolean;
+  onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const displayName = profile?.public_name || user?.full_name || customer?.name || "My Account";
+  const memberSince = new Date(user?.created_at || Date.now()).getFullYear();
+
+  return (
+    <div className="relative">
+      {/* Cover Image */}
+      <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+      </div>
+
+      {/* Profile Info */}
+      <div className="relative px-8 pb-8 -mt-16">
+        <div className="flex flex-col md:flex-row items-start md:items-end justify-between">
+          <div className="flex items-end gap-6">
+            {/* Avatar with Upload */}
+            <div className="relative group">
+              <Avatar
+                src={profile?.avatar_url || undefined}
+                alt={displayName}
+                size="xl"
+                className="border-4 border-white shadow-xl"
+              />
+              <label
+                htmlFor="avatar-upload"
+                className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
               >
-                Profile &amp; Security
-              </button>{" "}
-              tab.
+                {avatarUploading ? (
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-6 w-6 text-white" />
+                )}
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={onAvatarChange}
+                className="hidden"
+              />
+            </div>
+
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{displayName}</h1>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-1 text-gray-600">
+                  <Mail className="h-4 w-4" />
+                  <span>{user?.email}</span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-600">
+                  <Calendar className="h-4 w-4" />
+                  <span>Member since {memberSince}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Experience / info */}
-          <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-slate-50 shadow-sm shadow-slate-900/40">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
-                  <Star className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-300">
-                    Experience
-                  </p>
-                  <p className="text-[14px] text-slate-400">
-                    Curated just for you
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[16px] text-slate-200 leading-relaxed">
-              We’re continuously fine-tuning your recommendations based on your
-              wishlist, cart and order history. Soon you’ll see{" "}
-              <span className="font-semibold">personalized picks</span> and{" "}
-              <span className="font-semibold">early access previews</span> here.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2 text-[13px] text-slate-300">
-              <span className="rounded-full bg-white/5 px-3 py-1">
-                • Secure checkout
-              </span>
-              <span className="rounded-full bg-white/5 px-3 py-1">
-                • Certified jewellery
-              </span>
-              <span className="rounded-full bg-white/5 px-3 py-1">
-                • Dedicated support
-              </span>
-            </div>
+          <div className="mt-4 md:mt-0 flex gap-3">
+            <Button variant="outline" icon={<ShoppingBag className="h-4 w-4" />}>
+              View Orders
+            </Button>
+            <Button variant="outline" icon={<CreditCard className="h-4 w-4" />}>
+              Payment Methods
+            </Button>
           </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+});
 
-  function renderProfileAndSecurity() {
-    return (
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)]">
-        {/* Profile form */}
-        <div className="space-y-5 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-900/5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Profile
-              </p>
-              <p className="text-[14px] text-slate-400">
-                Update your primary contact details
-              </p>
-            </div>
+const StatsCard = React.memo(function StatsCard() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Total Orders</p>
+            <p className="text-2xl font-bold mt-1">24</p>
           </div>
-
-          <form onSubmit={handleProfileSave} className="space-y-4 text-[16px]">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={profileForm.full_name}
-                  onChange={handleProfileInputChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={profileForm.phone}
-                  onChange={handleProfileInputChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Date of Birth
-                </label>
-                <input
-                  type="date"
-                  name="dob"
-                  value={profileForm.dob}
-                  onChange={handleProfileInputChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Email (login)
-                </label>
-                <input
-                  type="email"
-                  value={displayUser?.email || ""}
-                  disabled
-                  className="w-full cursor-not-allowed rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-[16px] text-slate-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 pt-2">
-              <p className="text-[14px] text-slate-400">
-                These details are used for order updates and verification.
-              </p>
-              <Button
-                type="submit"
-                variant="primary"
-                className="min-w-[140px] text-[14px]"
-                disabled={profileSaving}
-              >
-                {profileSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </div>
-          </form>
+          <div className="p-3 bg-blue-100 rounded-full">
+            <ShoppingBag className="h-6 w-6 text-blue-600" />
+          </div>
         </div>
+      </Card>
 
-        {/* Avatar + Password */}
-        <div className="space-y-5">
-          {/* Avatar */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-900/5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Profile Image
-                </p>
-                <p className="text-[14px] text-slate-400">
-                  Personalize your account avatar
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="h-18 w-18 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                  {displayAvatar ? (
-                    <img
-                      src={displayAvatar}
-                      alt={displayUser?.full_name || "Avatar"}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[16px] font-medium text-slate-500">
-                      {displayUser?.full_name
-                        ? displayUser.full_name.charAt(0).toUpperCase()
-                        : "MG"}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[14px] font-medium text-slate-700 shadow-sm hover:border-rose-500 hover:text-rose-500">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                  {avatarUploading ? (
-                    <>
-                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Edit3 className="mr-1.5 h-4 w-4" />
-                      Change Avatar
-                    </>
-                  )}
-                </label>
-                <p className="text-[13px] text-slate-400">
-                  PNG, JPG, WEBP up to 10MB.
-                </p>
-              </div>
-            </div>
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Wishlist Items</p>
+            <p className="text-2xl font-bold mt-1">12</p>
           </div>
+          <div className="p-3 bg-pink-100 rounded-full">
+            <Heart className="h-6 w-6 text-pink-600" />
+          </div>
+        </div>
+      </Card>
 
-          {/* Password */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-900/5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/90 text-slate-50">
-                  <KeyRound className="h-4 w-4" />
-                </div>
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Member Since</p>
+            <p className="text-2xl font-bold mt-1">2023</p>
+          </div>
+          <div className="p-3 bg-green-100 rounded-full">
+            <Award className="h-6 w-6 text-green-600" />
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+});
+
+const ProfileTab = React.memo(function ProfileTab({
+  profile,
+  profileForm,
+  setProfileForm,
+  saving,
+  onSave,
+}: {
+  profile: Profile | null;
+  profileForm: any;
+  setProfileForm: React.Dispatch<React.SetStateAction<any>>;
+  saving: boolean;
+  onSave: (e: React.FormEvent) => Promise<void>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <UserIcon className="h-5 w-5" />
+              Personal Information
+            </h3>
+
+            <form onSubmit={onSave} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Security
-                  </p>
-                  <p className="text-[14px] text-slate-400">
-                    Change your account password
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Display Name
+                  </label>
+                  <Input
+                    type="text"
+                    value={profileForm.public_name}
+                    onChange={(e) =>
+                      setProfileForm((p: any) => ({
+                        ...p,
+                        public_name: e.target.value,
+                      }))
+                    }
+                    placeholder="Your public name"
+                    icon={<User className="h-4 w-4" />}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <Input
+                    type="text"
+                    value={profileForm.location}
+                    onChange={(e) =>
+                      setProfileForm((p: any) => ({
+                        ...p,
+                        location: e.target.value,
+                      }))
+                    }
+                    placeholder="City, Country"
+                    icon={<MapPin className="h-4 w-4" />}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Company
+                  </label>
+                  <Input
+                    type="text"
+                    value={profileForm.company}
+                    onChange={(e) =>
+                      setProfileForm((p: any) => ({
+                        ...p,
+                        company: e.target.value,
+                      }))
+                    }
+                    placeholder="Your company"
+                    icon={<Building className="h-4 w-4" />}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Website
+                  </label>
+                  <Input
+                    type="text"
+                    value={profileForm.website}
+                    onChange={(e) =>
+                      setProfileForm((p: any) => ({
+                        ...p,
+                        website: e.target.value,
+                      }))
+                    }
+                    placeholder="https://example.com"
+                    icon={<Globe className="h-4 w-4" />}
+                  />
                 </div>
               </div>
-            </div>
 
-            <form onSubmit={handlePasswordSave} className="space-y-3 text-[16px]">
               <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Current Password
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bio
                 </label>
-                <input
-                  type="password"
-                  name="current_password"
-                  value={passwordForm.current_password}
-                  onChange={handlePasswordInputChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                <Textarea
+                  value={profileForm.bio}
+                  onChange={(e) =>
+                    setProfileForm((p: any) => ({
+                      ...p,
+                      bio: e.target.value,
+                    }))
+                  }
+                  placeholder="Tell us about yourself..."
+                  rows={4}
                 />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    name="new_password"
-                    value={passwordForm.new_password}
-                    onChange={handlePasswordInputChange}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    name="confirm_password"
-                    value={passwordForm.confirm_password}
-                    onChange={handlePasswordInputChange}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                  />
-                </div>
-              </div>
-
-              {passwordError && (
-                <div className="flex items-start gap-2 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
-                  <AlertCircle className="mt-0.5 h-4 w-4" />
-                  <p>{passwordError}</p>
-                </div>
-              )}
-              {passwordMessage && (
-                <div className="flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-[13px] text-emerald-700">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4" />
-                  <p>{passwordMessage}</p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <p className="text-[13px] text-slate-400">
-                  Use a strong password you haven’t used elsewhere.
+                <p className="text-xs text-gray-500 mt-1">
+                  Brief description for your profile. URLs are hyperlinked.
                 </p>
+              </div>
+
+              <div className="flex justify-end pt-4">
                 <Button
                   type="submit"
-                  variant="outline"
-                  className="min-w-[150px] text-[14px]"
-                  disabled={passwordSaving}
+                  disabled={saving}
+                  icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 >
-                  {passwordSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Password"
-                  )}
+                  {saving ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>
           </div>
-        </div>
-      </div>
-    );
-  }
+        </Card>
 
-  function renderAddresses() {
-    return (
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.3fr)]">
-        {/* Address list */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Saved Addresses
-              </p>
-              <p className="text-[14px] text-slate-400">
-                Shipping and billing locations
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex items-center gap-2 text-[14px] text-slate-600 hover:bg-slate-50"
-              onClick={startNewAddress}
-            >
-              <Plus className="h-4 w-4" />
-              Add New
-            </Button>
-          </div>
-
-          {loadingAddresses ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-26 rounded-2xl" />
-              ))}
-            </div>
-          ) : addresses.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-[14px] text-slate-500">
-              You don’t have any saved addresses yet. Add one using the form on
-              the right.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {addresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  className="rounded-2xl border border-slate-100 bg-white p-5 text-[16px] text-slate-700 shadow-sm shadow-slate-900/5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium text-slate-900">
-                          {addr.label || "Address"}
-                        </p>
-                        {addr.is_default_shipping && (
-                          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[13px] font-medium text-emerald-700">
-                            Default Shipping
-                          </span>
-                        )}
-                        {addr.is_default_billing && (
-                          <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[13px] font-medium text-sky-700">
-                            Default Billing
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-[14px] text-slate-500">
-                        {addr.full_name || "—"} &bull; {addr.phone || "—"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        className="rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 hover:border-rose-500 hover:text-rose-500"
-                        onClick={() => startEditAddress(addr)}
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 hover:border-rose-500 hover:text-rose-500"
-                        onClick={() => handleAddressDelete(addr.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
-                    {addr.line1}
-                    {addr.line2 ? `, ${addr.line2}` : ""}, {addr.city}
-                    {addr.state ? `, ${addr.state}` : ""},{" "}
-                    {addr.postal_code || ""} {addr.country}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[13px]">
-                    {!addr.is_default_shipping && (
-                      <button
-                        type="button"
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-600 hover:border-rose-500 hover:text-rose-500"
-                        onClick={() => handleSetDefaultShipping(addr.id)}
-                      >
-                        Set as Default Shipping
-                      </button>
-                    )}
-                    {!addr.is_default_billing && (
-                      <button
-                        type="button"
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-600 hover:border-rose-500 hover:text-rose-500"
-                        onClick={() => handleSetDefaultBilling(addr.id)}
-                      >
-                        Set as Default Billing
-                      </button>
-                    )}
-                  </div>
+        {/* Quick Stats */}
+        <div className="space-y-6">
+          <Card>
+            <div className="p-6">
+              <h4 className="font-medium mb-4">Profile Completion</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Basic Info</span>
+                  <span className="font-medium">80%</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Address form */}
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm shadow-slate-900/5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                {addressEditingId ? "Edit Address" : "Add New Address"}
-              </p>
-              <p className="text-[14px] text-slate-400">
-                These details are used for shipping & billing
-              </p>
-            </div>
-          </div>
-
-          {addressError && (
-            <div className="mb-3 flex items-start gap-2 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
-              <AlertCircle className="mt-0.5 h-4 w-4" />
-              <p>{addressError}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleAddressSave} className="space-y-3 text-[16px]">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Label
-                </label>
-                <input
-                  type="text"
-                  name="label"
-                  value={addressForm.label}
-                  onChange={handleAddressChange}
-                  placeholder="Home, Office..."
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={addressForm.full_name}
-                  onChange={handleAddressChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={addressForm.phone}
-                  onChange={handleAddressChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Country
-                </label>
-                <input
-                  type="text"
-                  name="country"
-                  value={addressForm.country}
-                  onChange={handleAddressChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                Address Line 1
-              </label>
-              <input
-                type="text"
-                name="line1"
-                value={addressForm.line1}
-                onChange={handleAddressChange}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                Address Line 2
-              </label>
-              <input
-                type="text"
-                name="line2"
-                value={addressForm.line2}
-                onChange={handleAddressChange}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  City
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={addressForm.city}
-                  onChange={handleAddressChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  State
-                </label>
-                <input
-                  type="text"
-                  name="state"
-                  value={addressForm.state}
-                  onChange={handleAddressChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[14px] font-medium text-slate-500">
-                  Postal Code
-                </label>
-                <input
-                  type="text"
-                  name="postal_code"
-                  value={addressForm.postal_code}
-                  onChange={handleAddressChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[16px] text-slate-900 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-4 pt-1 text-[14px] text-slate-600">
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="is_default_shipping"
-                  checked={addressForm.is_default_shipping}
-                  onChange={handleAddressChange}
-                  className="h-4 w-4 rounded border-slate-300 text-rose-500 focus:ring-rose-500"
-                />
-                Default shipping address
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="is_default_billing"
-                  checked={addressForm.is_default_billing}
-                  onChange={handleAddressChange}
-                  className="h-4 w-4 rounded border-slate-300 text-rose-500 focus:ring-rose-500"
-                />
-                Default billing address
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 pt-2">
-              <Button
-                type="submit"
-                variant="primary"
-                className="min-w-[150px] text-[14px]"
-                disabled={addressSaving}
-              >
-                {addressSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : addressEditingId ? (
-                  "Update Address"
-                ) : (
-                  "Add Address"
-                )}
-              </Button>
-              <p className="text-[13px] text-slate-400">
-                You can manage defaults from the card actions.
-              </p>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  function renderOrders() {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Order History
-            </p>
-            <p className="text-[14px] text-slate-400">
-              Track your past orders and their current status
-            </p>
-          </div>
-        </div>
-
-        {loadingOrders ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-2xl" />
-            ))}
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-[14px] text-slate-500">
-            You haven’t placed any orders yet. Once you do, they’ll appear here
-            with detailed tracking.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {orders.map((order: any) => (
-              <div
-                key={order.id}
-                className="rounded-2xl border border-slate-100 bg-white p-5 text-[16px] text-slate-700 shadow-sm shadow-slate-900/5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-[13px] font-semibold tracking-[0.12em] text-slate-500">
-                      ORDER #
-                      {(order.order_number || order.id || "")
-                        .toString()
-                        .slice(0, 8)}
-                    </p>
-                    <p className="text-[14px] text-slate-400">
-                      Placed on {formatDate(order.placed_at)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-[14px] text-slate-500">Total</p>
-                      <p className="text-[16px] font-semibold text-slate-900">
-                        {order.currency || "INR"}{" "}
-                        {Number(order.grand_total || 0).toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 text-[14px]">
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[13px] font-medium text-slate-700">
-                        {humanStatus(order.status || order.order_status)}
-                      </span>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 text-[13px] font-medium text-rose-600 hover:text-rose-700"
-                        onClick={() => handleToggleOrderTimeline(order.id)}
-                      >
-                        <Truck className="h-4 w-4" />
-                        {openOrderId === order.id
-                          ? "Hide tracking"
-                          : "Track order"}
-                      </button>
-                    </div>
-                  </div>
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 rounded-full" style={{ width: '80%' }} />
                 </div>
-
-                <AnimatePresence initial={false}>
-                  {openOrderId === order.id && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="mt-3 border-t border-dashed border-slate-200 pt-3"
-                    >
-                      {timelineLoadingId === order.id ? (
-                        <div className="flex items-center gap-2 text-[13px] text-slate-500">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading timeline...
-                        </div>
-                      ) : (
-                        <OrderTimeline
-                          entries={timelineByOrderId[order.id] || []}
-                          orderStatus={order.status || order.order_status}
-                        />
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  function renderWishlist() {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Wishlist
-            </p>
-            <p className="text-[14px] text-slate-400">
-              Saved designs you’re considering
-            </p>
-          </div>
-        </div>
-
-        {loadingWishlist ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-2xl" />
-            ))}
-          </div>
-        ) : wishlist.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center text-[14px] text-slate-500">
-            You haven’t added anything to your wishlist yet. Tap the{" "}
-            <span className="font-semibold">♥</span> icon on any product to
-            save it here.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {wishlist.map((item) => {
-              const p = item.product || {};
-              const title = item.product_title || p.title || "Untitled design";
-              const slug = item.product_slug || p.slug;
-              const image =
-                item.product_primary_image || p.primary_image || p.image;
-              const price = item.product_price ?? p.price ?? 0;
-              const currency = item.product_currency || p.currency || "INR";
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-[16px] text-slate-700 shadow-sm shadow-slate-900/5 sm:flex-row sm:items-center"
-                >
-                  <div className="flex flex-1 items-center gap-3">
-                    <div className="h-18 w-18 flex-shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-100">
-                      {image ? (
-                        <img
-                          src={image}
-                          alt={title}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[13px] text-slate-400">
-                          Image
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[16px] font-medium text-slate-900">
-                        {title}
-                      </p>
-                      {slug && (
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/products/${slug}`)}
-                          className="inline-flex items-center gap-1 text-[13px] font-medium text-rose-600 hover:text-rose-700"
-                        >
-                          View details
-                        </button>
-                      )}
-                      <p className="text-[14px] text-slate-500">
-                        {currency} {Number(price).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-col sm:items-end">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      className="text-[14px]"
-                      onClick={() => handleMoveWishlistToCart(item)}
-                    >
-                      Move to Cart
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveWishlistItem(item.id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[13px] text-slate-600 hover:border-rose-500 hover:text-rose-500"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  /* =========================================================
-   * Main render
-   * ======================================================= */
-
-  if (!isLoggedIn && !authLoading) {
-    return null;
-  }
-
-  return (
-    <AnimatedSection className="bg-slate-50/70 py-12 sm:py-20 text-[16px]">
-      <Container>
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="h-18 w-18 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                {displayAvatar ? (
-                  <img
-                    src={displayAvatar}
-                    alt={displayUser?.full_name || "Avatar"}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[18px] font-medium text-slate-600">
-                    {displayUser?.full_name
-                      ? displayUser.full_name.charAt(0).toUpperCase()
-                      : "MG"}
-                  </div>
-                )}
               </div>
             </div>
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-['Playfair_Display'] text-4xl font-semibold tracking-tight text-slate-900">
-                  My Account
-                </h1>
-                <Badge className="bg-rose-50 text-rose-600 text-[13px]">
-                  MINAL GEMS CLIENT
-                </Badge>
+          </Card>
+
+          <Card>
+            <div className="p-6">
+              <h4 className="font-medium mb-4">Account Status</h4>
+              <div className="flex items-center gap-2 text-green-600">
+                <Check className="h-5 w-5" />
+                <span className="font-medium">Verified Account</span>
               </div>
-              <p className="text-[15px] text-slate-500">
-                Manage your profile, addresses, orders and wishlist — all in one
-                place.
+              <p className="text-sm text-gray-500 mt-2">
+                Your account is active and verified. All features are available.
               </p>
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 text-[14px] md:justify-end">
-            <div className="flex items-center gap-1 text-slate-500">
-              <Globe2 className="h-4 w-4" />
-              Secure account area
-            </div>
-            <div className="flex items-center gap-1 text-slate-500">
-              <Shield className="h-4 w-4" />
-              Encrypted &amp; private
-            </div>
-          </div>
+          </Card>
         </div>
-
-        {/* Tabs */}
-        <div className="mb-6 overflow-x-auto pb-1">
-          <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm shadow-slate-900/5">
-            {tabDefs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[14px] font-medium transition ${
-                  activeTab === t.id
-                    ? "bg-slate-900 text-slate-50 shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {t.icon}
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-[14px] text-rose-700">
-            <AlertCircle className="mt-0.5 h-4 w-4" />
-            <p>{error}</p>
-          </div>
-        )}
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.18 }}
-            className="space-y-4"
-          >
-            {activeTab === "overview" && renderOverview()}
-            {activeTab === "profile" && renderProfileAndSecurity()}
-            {activeTab === "addresses" && renderAddresses()}
-            {activeTab === "orders" && renderOrders()}
-            {activeTab === "wishlist" && renderWishlist()}
-          </motion.div>
-        </AnimatePresence>
-      </Container>
-    </AnimatedSection>
-  );
-}
-
-/* =========================================================
- * Small components
- * ======================================================= */
-
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-  isCurrency,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  hint?: string;
-  isCurrency?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm shadow-slate-900/5">
-      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500">
-        {icon}
-      </div>
-      <div className="flex flex-col">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {label}
-        </p>
-        <p className="text-2xl font-semibold text-slate-900">
-          {isCurrency ? `₹ ${Number(value || 0).toFixed(2)}` : value || 0}
-        </p>
-        {hint && <p className="text-[13px] text-slate-400">{hint}</p>}
       </div>
     </div>
   );
-}
+});
 
-function OrderTimeline({
-  entries,
-  orderStatus,
+const ContactTab = React.memo(function ContactTab({
+  contactForm,
+  setContactForm,
+  saving,
+  onSave,
 }: {
-  entries: OrderTimelineEntry[];
-  orderStatus: string;
+  contactForm: any;
+  setContactForm: React.Dispatch<React.SetStateAction<any>>;
+  saving: boolean;
+  onSave: (e: React.FormEvent) => Promise<void>;
 }) {
-  if (!entries.length) {
+  return (
+    <div className="max-w-2xl">
+      <Card>
+        <div className="p-6">
+          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Contact Information
+          </h3>
+
+          <form onSubmit={onSave} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Full Name
+              </label>
+              <Input
+                type="text"
+                value={contactForm.name}
+                onChange={(e) =>
+                  setContactForm((p: any) => ({ ...p, name: e.target.value }))
+                }
+                placeholder="John Doe"
+                icon={<User className="h-4 w-4" />}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
+              </label>
+              <Input
+                type="email"
+                value={contactForm.email}
+                onChange={(e) =>
+                  setContactForm((p: any) => ({ ...p, email: e.target.value }))
+                }
+                placeholder="john@example.com"
+                icon={<Mail className="h-4 w-4" />}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This email will be used for account notifications and password resets.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <Input
+                type="tel"
+                value={contactForm.phone}
+                onChange={(e) =>
+                  setContactForm((p: any) => ({ ...p, phone: e.target.value }))
+                }
+                placeholder="+1 (555) 123-4567"
+                icon={<Phone className="h-4 w-4" />}
+              />
+            </div>
+
+            <div className="border-t pt-6">
+              <h4 className="font-medium mb-4">Email Preferences</h4>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded text-blue-600" defaultChecked />
+                  <span className="text-sm">Product updates and announcements</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded text-blue-600" defaultChecked />
+                  <span className="text-sm">Promotional offers</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded text-blue-600" />
+                  <span className="text-sm">Newsletter</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button
+                type="submit"
+                disabled={saving}
+                icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              >
+                {saving ? "Saving..." : "Save Contact Info"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Card>
+    </div>
+  );
+});
+
+const AddressesTab = React.memo(function AddressesTab({
+  addresses,
+  loading,
+  onAddAddress,
+  onEditAddress,
+  onDeleteAddress,
+  onSetDefault,
+}: {
+  addresses: Address[];
+  loading: boolean;
+  onAddAddress: () => void;
+  onEditAddress: (id: string) => void;
+  onDeleteAddress: (id: string) => void;
+  onSetDefault: (id: string, type: 'shipping' | 'billing') => void;
+}) {
+  if (loading) {
     return (
-      <div className="text-[14px] text-slate-500">
-        We’ll show a detailed timeline here once this order starts moving
-        through our system.
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <Skeleton key={i} className="h-64 rounded-xl" />
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {entries.map((e, idx) => (
-        <div key={e.id} className="flex items-start gap-3 text-[13px]">
-          <div className="flex flex-col items-center">
-            <div
-              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
-                idx === entries.length - 1
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                  : "border-slate-300 bg-white text-slate-600"
-              }`}
-            >
-              {idx + 1}
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-semibold">Saved Addresses</h3>
+        <Button icon={<Plus className="h-4 w-4" />} onClick={onAddAddress}>
+          Add New Address
+        </Button>
+      </div>
+
+      {addresses.length === 0 ? (
+        <Card className="p-12 text-center">
+          <MapPinIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h4 className="text-lg font-medium mb-2">No Addresses Saved</h4>
+          <p className="text-gray-500 mb-6">
+            Add your first address to make checkout faster
+          </p>
+          <Button icon={<Plus className="h-4 w-4" />} onClick={onAddAddress}>
+            Add Address
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {addresses.map((address) => (
+            <Card key={address.id} className="relative">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-5 w-5 text-gray-400" />
+                    <span className="font-medium">{address.label || 'Address'}</span>
+                    {address.is_default_shipping && (
+                      <Badge variant="success" size="sm">Default Shipping</Badge>
+                    )}
+                    {address.is_default_billing && (
+                      <Badge variant="blue" size="sm">Default Billing</Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onEditAddress(address.id)}
+                      className="p-1 hover:bg-gray-100 rounded"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteAddress(address.id)}
+                      className="p-1 hover:bg-gray-100 rounded text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <p className="font-medium">{address.full_name}</p>
+                  <p className="text-gray-600">{address.line1}</p>
+                  {address.line2 && <p className="text-gray-600">{address.line2}</p>}
+                  <p className="text-gray-600">
+                    {address.city}, {address.state} {address.postal_code}
+                  </p>
+                  <p className="text-gray-600">{address.country}</p>
+                  <p className="text-gray-600">{address.phone}</p>
+                </div>
+
+                <div className="flex gap-3 mt-6 pt-4 border-t">
+                  {!address.is_default_shipping && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSetDefault(address.id, 'shipping')}
+                    >
+                      Set as Shipping
+                    </Button>
+                  )}
+                  {!address.is_default_billing && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSetDefault(address.id, 'billing')}
+                    >
+                      Set as Billing
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+const WishlistTab = React.memo(function WishlistTab({
+  wishlist,
+  loading,
+  onRemove,
+}: {
+  wishlist: WishlistItem[];
+  loading: boolean;
+  onRemove: (id: string) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-80 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (wishlist.length === 0) {
+    return (
+      <Card className="p-12 text-center">
+        <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h4 className="text-lg font-medium mb-2">Your Wishlist is Empty</h4>
+        <p className="text-gray-500 mb-6">
+          Save items you love for later
+        </p>
+        <Button onClick={() => window.location.href = '/products'}>
+          Browse Products
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold">My Wishlist</h3>
+          <p className="text-gray-500 text-sm">
+            {wishlist.length} {wishlist.length === 1 ? 'item' : 'items'}
+          </p>
+        </div>
+        <Button variant="outline">
+          Share Wishlist
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {wishlist.map((item) => (
+          <Card key={item.id} className="group">
+            <div className="p-4">
+              <div className="aspect-square bg-gray-100 rounded-lg mb-4 relative overflow-hidden">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.product_title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <Package className="h-12 w-12" />
+                  </div>
+                )}
+                <button
+                  onClick={() => onRemove(item.id)}
+                  className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 hover:text-red-600 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="font-medium line-clamp-2">{item.product_title}</h4>
+                {item.price && (
+                  <p className="text-lg font-bold text-gray-900">${item.price.toFixed(2)}</p>
+                )}
+                <div className="flex gap-2 mt-4">
+                  <Button size="sm" className="flex-1">
+                    Add to Cart
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    View Details
+                  </Button>
+                </div>
+              </div>
             </div>
-            {idx < entries.length - 1 && (
-              <div className="mt-0.5 h-6 w-px bg-slate-200" />
-            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+const SettingsTab = React.memo(function SettingsTab({
+  onLogout,
+}: {
+  onLogout: () => void;
+}) {
+  return (
+    <div className="max-w-2xl">
+      <div className="space-y-6">
+        <Card>
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Account Security
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-3 border-b">
+                <div>
+                  <p className="font-medium">Password</p>
+                  <p className="text-sm text-gray-500">Last changed 3 months ago</p>
+                </div>
+                <Button variant="outline" size="sm" icon={<Lock className="h-4 w-4" />}>
+                  Change
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between py-3 border-b">
+                <div>
+                  <p className="font-medium">Two-Factor Authentication</p>
+                  <p className="text-sm text-gray-500">Add an extra layer of security</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  Enable
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="font-medium">Login History</p>
+                  <p className="text-sm text-gray-500">View recent account activity</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  View
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex-1 space-y-0.5">
-            <p className="font-medium text-slate-800">
-              {humanStatus(e.to_status)}
-            </p>
-            <p className="text-[13px] text-slate-500">
-              {formatDate(e.changed_at)}
-            </p>
-            {e.note && (
-              <p className="text-[13px] text-slate-500">{e.note}</p>
+        </Card>
+
+        <Card>
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </h3>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between py-3 border-b">
+                <span>Email Notifications</span>
+                <input type="checkbox" className="toggle" defaultChecked />
+              </label>
+              <label className="flex items-center justify-between py-3 border-b">
+                <span>Push Notifications</span>
+                <input type="checkbox" className="toggle" defaultChecked />
+              </label>
+              <label className="flex items-center justify-between py-3">
+                <span>SMS Alerts</span>
+                <input type="checkbox" className="toggle" />
+              </label>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="border-red-100 bg-red-50">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4 text-red-700">Danger Zone</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Delete Account</p>
+                  <p className="text-sm text-red-600">
+                    Permanently remove your account and all data
+                  </p>
+                </div>
+                <Button variant="danger" size="sm">
+                  Delete Account
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Log Out</p>
+                  <p className="text-sm text-gray-600">
+                    Sign out from all devices
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<LogOut className="h-4 w-4" />}
+                  onClick={onLogout}
+                >
+                  Log Out
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+});
+
+const NotificationsTab = React.memo(function NotificationsTab({
+  notifications,
+  loading,
+}: {
+  notifications: Notification[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-semibold">Notifications</h3>
+        <Button variant="outline" size="sm">
+          Mark all as read
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {notifications.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h4 className="text-lg font-medium mb-2">No Notifications</h4>
+            <p className="text-gray-500">You're all caught up!</p>
+          </Card>
+        ) : (
+          notifications.map((notification) => (
+            <Card
+              key={notification.id}
+              className={`p-4 ${!notification.read ? 'bg-blue-50 border-blue-200' : ''}`}
+            >
+              <div className="flex items-start gap-4">
+                <div className={`p-2 rounded-full ${
+                  notification.type === 'order' ? 'bg-green-100' :
+                  notification.type === 'promotion' ? 'bg-purple-100' :
+                  'bg-blue-100'
+                }`}>
+                  {notification.type === 'order' ? (
+                    <ShoppingBag className="h-5 w-5 text-green-600" />
+                  ) : notification.type === 'promotion' ? (
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                  ) : (
+                    <Bell className="h-5 w-5 text-blue-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <h4 className="font-medium">{notification.title}</h4>
+                    <span className="text-sm text-gray-500">
+                      {new Date(notification.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mt-1">{notification.message}</p>
+                </div>
+                {!notification.read && (
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+});
+
+/* ======================================================
+   PAGE
+====================================================== */
+
+export default function ProfilePage() {
+  const navigate = useNavigate();
+  const auth = useContext(AuthContext);
+  
+  const user = auth?.user;
+  const isLoggedIn = !!auth?.isLoggedIn;
+  const logout = auth?.logout;
+
+  const [activeTab, setActiveTab] = useState<TabId>("profile");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const [profileForm, setProfileForm] = useState({
+    public_name: "",
+    bio: "",
+    location: "",
+    company: "",
+    website: "",
+  });
+
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+
+  const tabs = [
+    { id: "profile", label: "Profile", icon: UserIcon },
+    { id: "contact", label: "Contact", icon: Mail },
+    { id: "addresses", label: "Addresses", icon: MapPin },
+    { id: "wishlist", label: "Wishlist", icon: Heart },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  const loadData = useCallback(async () => {
+    if (!isLoggedIn) return;
+
+    try {
+      setLoading(true);
+      const [profileRes, customerRes, addressesRes, wishlistRes, notificationsRes] = await Promise.all([
+        getMyProfile(),
+        getCustomer(),
+        getCustomerAddresses(),
+        getWishlist(),
+        getNotifications(),
+      ]);
+
+      if (profileRes.ok && profileRes.profile) {
+        setProfile(profileRes.profile);
+        setProfileForm({
+          public_name: profileRes.profile.public_name || "",
+          bio: profileRes.profile.bio || "",
+          location: profileRes.profile.location || "",
+          company: profileRes.profile.company || "",
+          website: profileRes.profile.website || "",
+        });
+      }
+
+      if (customerRes.ok && customerRes.customer) {
+        setCustomer(customerRes.customer);
+        setContactForm({
+          name: customerRes.customer.name || "",
+          email: customerRes.customer.email || "",
+          phone: customerRes.customer.phone || "",
+        });
+      }
+
+      if (addressesRes.ok && addressesRes.addresses) {
+        setAddresses(addressesRes.addresses);
+      }
+
+      if (wishlistRes.ok && wishlistRes.wishlist?.items) {
+        setWishlist(wishlistRes.wishlist.items);
+      }
+
+      if (notificationsRes.ok && notificationsRes.notifications) {
+        setNotifications(notificationsRes.notifications);
+      }
+    } catch (error) {
+      toast.error("Failed to load profile data");
+      console.error("Error loading profile data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setAvatarUploading(true);
+      const res = await uploadAvatar(file);
+      if (res.ok && res.avatar_url) {
+        setProfile(prev => prev ? { ...prev, avatar_url: res.avatar_url } : null);
+        toast.success("Avatar updated successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to upload avatar");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      const res = await upsertProfile(profileForm);
+      if (res.ok && res.profile) {
+        setProfile(res.profile);
+        toast.success("Profile updated successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleContactSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      const res = await updateCustomer(contactForm);
+      if (res.ok && res.customer) {
+        setCustomer(res.customer);
+        toast.success("Contact information updated");
+      }
+    } catch (error) {
+      toast.error("Failed to update contact information");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveFromWishlist = async (itemId: string) => {
+    try {
+      await removeFromWishlist(itemId);
+      setWishlist(prev => prev.filter(item => item.id !== itemId));
+      toast.success("Removed from wishlist");
+    } catch (error) {
+      toast.error("Failed to remove item");
+    }
+  };
+
+  const handleLogout = async () => {
+    if (logout) {
+      await logout();
+      navigate('/login');
+    }
+  };
+
+  const handleAddAddress = () => {
+    // Implement address modal/form
+    toast("Address form coming soon");
+  };
+
+  const handleEditAddress = (id: string) => {
+    // Implement address edit
+    toast("Edit address coming soon");
+  };
+
+  const handleDeleteAddress = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this address?")) {
+      try {
+        await deleteAddress(id);
+        setAddresses(prev => prev.filter(addr => addr.id !== id));
+        toast.success("Address deleted");
+      } catch (error) {
+        toast.error("Failed to delete address");
+      }
+    }
+  };
+
+  const handleSetDefaultAddress = (id: string, type: 'shipping' | 'billing') => {
+    // Implement set default address
+    toast(`Set as default ${type} address`);
+  };
+
+  if (!isLoggedIn) {
+    navigate('/login');
+    return null;
+  }
+
+  if (loading && !profile && !customer) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Container className="py-8">
+          <Skeleton className="h-64 w-full rounded-2xl mb-8" />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <Skeleton className="h-96 rounded-xl" />
+            <div className="lg:col-span-3">
+              <Skeleton className="h-96 rounded-xl" />
+            </div>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Container className="py-8">
+        {/* Profile Header */}
+        <ProfileHeader
+          user={user}
+          profile={profile}
+          customer={customer}
+          avatarUploading={avatarUploading}
+          onAvatarChange={handleAvatarChange}
+        />
+
+        {/* Stats Card */}
+        <StatsCard />
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar Navigation */}
+          <Card className="p-4 lg:col-span-1">
+            <nav className="space-y-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as TabId)}
+                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="h-5 w-5" />
+                      <span className="font-medium">{tab.label}</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-8 pt-6 border-t">
+              <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white">
+                <div className="flex items-center gap-3 mb-2">
+                  <Gem className="h-5 w-5" />
+                  <span className="font-medium">Premium Member</span>
+                </div>
+                <p className="text-sm opacity-90">
+                  Enjoy exclusive benefits and early access
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {activeTab === "profile" && (
+              <ProfileTab
+                profile={profile}
+                profileForm={profileForm}
+                setProfileForm={setProfileForm}
+                saving={saving}
+                onSave={handleProfileSave}
+              />
+            )}
+
+            {activeTab === "contact" && (
+              <ContactTab
+                contactForm={contactForm}
+                setContactForm={setContactForm}
+                saving={saving}
+                onSave={handleContactSave}
+              />
+            )}
+
+            {activeTab === "addresses" && (
+              <AddressesTab
+                addresses={addresses}
+                loading={loading}
+                onAddAddress={handleAddAddress}
+                onEditAddress={handleEditAddress}
+                onDeleteAddress={handleDeleteAddress}
+                onSetDefault={handleSetDefaultAddress}
+              />
+            )}
+
+            {activeTab === "wishlist" && (
+              <WishlistTab
+                wishlist={wishlist}
+                loading={loading}
+                onRemove={handleRemoveFromWishlist}
+              />
+            )}
+
+            {activeTab === "notifications" && (
+              <NotificationsTab
+                notifications={notifications}
+                loading={loading}
+              />
+            )}
+
+            {activeTab === "settings" && (
+              <SettingsTab onLogout={handleLogout} />
             )}
           </div>
         </div>
-      ))}
-
-      <div className="mt-1 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[13px] text-slate-500">
-        <Truck className="h-4 w-4 text-slate-400" />
-        <span>
-          Current status:{" "}
-          <span className="font-medium">{humanStatus(orderStatus)}</span>
-        </span>
-      </div>
+      </Container>
     </div>
   );
 }

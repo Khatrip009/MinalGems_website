@@ -28,5 +28,7 @@ export async function logout() {
 export async function refresh() {
   return apiFetch<AuthResponse>("/auth/refresh", {
     method: "POST",
+    skipAuthLogout: true, // ✅ CRITICAL
   });
 }
+

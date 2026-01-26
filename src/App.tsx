@@ -17,6 +17,13 @@ export default function App() {
   // 🔥 Enable visitor tracking
   // ---------------------------
   useVisitorTracking();
+  
+   // ---------------------------
+  // 🔝 FORCE scroll to top on refresh
+  // ---------------------------
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
 
   // ---------------------------
   // 🔔 Start SSE real-time listener

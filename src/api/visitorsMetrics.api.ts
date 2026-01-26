@@ -1,6 +1,11 @@
-// src/api/visitorsMetrics.api.ts
 import { apiFetch } from "./client";
-import type { VisitorsMetrics } from "./types";
+
+export interface VisitorsMetrics {
+  total_visitors: number;
+  visitors_today: number;
+  page_views_today: number;
+  new_visitors_today: number;
+}
 
 /**
  * GET /api/analytics/visitors-metrics/summary

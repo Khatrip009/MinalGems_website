@@ -1,9 +1,15 @@
 // src/api/wishlist.api.ts
+// =====================================================
+// WISHLIST API — EXACTLY MATCHES BACKEND ROUTES
+// Backend: src/routes/sales/wishlist.routes.js
+// Mounted at: /api/sales/wishlist
+// =====================================================
+
 import { apiFetch } from "./client";
 
 /* =====================================================
- * TYPES
- * ===================================================== */
+   TYPES
+===================================================== */
 
 export interface WishlistItem {
   id: string;
@@ -32,38 +38,24 @@ export interface AddToWishlistResponse {
   already_exists?: boolean;
 }
 
-export interface RemoveFromWishlistResponse {
-  ok: boolean;
-}
-
-export interface ClearWishlistResponse {
-  ok: boolean;
-}
+/* =====================================================
+   EVENTS (OPTIONAL UI SYNC)
+===================================================== */
 
 type WishlistEventKind = "set" | "add" | "remove" | "clear";
 
-interface WishlistEventDetail {
-  kind: WishlistEventKind;
-  count?: number;
-  delta?: number;
-}
-
-/* =====================================================
- * EVENTS
- * ===================================================== */
-
-/** Fire a browser event so Header (and others) can react in real-time */
-function emitWishlistEvent(detail: WishlistEventDetail) {
+function emitWishlistEvent(kind: WishlistEventKind, delta?: number) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
-    new CustomEvent<WishlistEventDetail>("wishlist:updated", { detail })
+    new CustomEvent("wishlist:updated", {
+      detail: { kind, delta },
+    })
   );
 }
 
 /* =====================================================
- * API CALLS
- * Base: /api/sales/wishlist
- * ===================================================== */
+   API CALLS
+===================================================== */
 
 /**
  * GET /api/sales/wishlist
@@ -71,18 +63,15 @@ function emitWishlistEvent(detail: WishlistEventDetail) {
 export async function getWishlist() {
   const res = await apiFetch<WishlistResponse>("/sales/wishlist");
 
-  if (res?.ok && res.wishlist?.items) {
-    emitWishlistEvent({
-      kind: "set",
-      count: res.wishlist.items.length,
-    });
+  if (res.ok && res.wishlist?.items) {
+    emitWishlistEvent("set", res.wishlist.items.length);
   }
 
   return res;
 }
 
 /**
- * POST /api/sales/wishlist
+ * POST /api/sales/wishlist/add
  * body: { product_id }
  */
 export async function addToWishlist(product_id: string) {
@@ -90,48 +79,52 @@ export async function addToWishlist(product_id: string) {
     throw new Error("product_id_required");
   }
 
-  const res = await apiFetch<AddToWishlistResponse>("/sales/wishlist", {
-    method: "POST",
-    body: { product_id },
-  });
+  const res = await apiFetch<AddToWishlistResponse>(
+    "/sales/wishlist/add",
+    {
+      method: "POST",
+      body: { product_id },
+    }
+  );
 
   if (res.ok && !res.already_exists) {
-    emitWishlistEvent({ kind: "add", delta: 1 });
+    emitWishlistEvent("add", 1);
   }
 
   return res;
 }
 
 /**
- * DELETE /api/sales/wishlist/:item_id
+ * DELETE /api/sales/wishlist/remove/:item_id
  */
 export async function removeFromWishlist(itemId: string) {
   if (!itemId) {
     throw new Error("wishlist_item_id_required");
   }
 
-  const res = await apiFetch<RemoveFromWishlistResponse>(
-    `/sales/wishlist/${itemId}`,
+  const res = await apiFetch<{ ok: boolean }>(
+    `/sales/wishlist/remove/${itemId}`,
     { method: "DELETE" }
   );
 
   if (res.ok) {
-    emitWishlistEvent({ kind: "remove", delta: 1 });
+    emitWishlistEvent("remove", 1);
   }
 
   return res;
 }
 
 /**
- * DELETE /api/sales/wishlist
+ * DELETE /api/sales/wishlist/clear
  */
 export async function clearWishlist() {
-  const res = await apiFetch<ClearWishlistResponse>("/sales/wishlist", {
-    method: "DELETE",
-  });
+  const res = await apiFetch<{ ok: boolean }>(
+    "/sales/wishlist/clear",
+    { method: "DELETE" }
+  );
 
   if (res.ok) {
-    emitWishlistEvent({ kind: "clear" });
+    emitWishlistEvent("clear");
   }
 
   return res;

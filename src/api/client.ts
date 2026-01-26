@@ -1,3 +1,4 @@
+// src/api/client.ts
 // =====================================================
 // CLIENT API — Core HTTP Wrapper (FIXED)
 // =====================================================
@@ -73,66 +74,55 @@ export async function apiFetch<T>(
   const method = (options.method || "GET").toUpperCase();
 
   const headers = new Headers(options.headers || {});
-
-  // Set JSON header ONLY when body is plain object
   const isFormData = options.body instanceof FormData;
 
   if (!headers.has("Content-Type") && options.body && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
 
-  // Auth token
   const token = getToken();
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Visitor ID (analytics)
   headers.set("x-visitor-id", getVisitorId());
 
-  // Body handling
-  let bodyToSend: any = undefined;
-
+  let bodyToSend: any;
   if (options.body !== undefined && method !== "GET") {
-    bodyToSend = isFormData
-      ? options.body
-      : typeof options.body === "string"
-        ? options.body
-        : JSON.stringify(options.body);
+    bodyToSend = isFormData ? options.body : JSON.stringify(options.body);
   }
 
-  let response: Response;
-
-  try {
-    response = await fetch(url, {
-      ...options,
-      method,
-      credentials: "include",
-      headers,
-      body: bodyToSend,
-    });
-  } catch (err) {
-    console.error("🌐 Network error:", err);
-    throw new Error("network_error");
-  }
+  const response = await fetch(url, {
+    ...options,
+    method,
+    credentials: "include",
+    headers,
+    body: bodyToSend,
+  });
 
   let data: any = null;
   try {
     data = await response.json();
-  } catch {
-    throw new Error("invalid_json_response");
-  }
+  } catch {}
 
-  // Unauthorized → force logout
-  if (response.status === 401) {
+  // 🔥 FIX: DO NOT FORCE LOGOUT IF skipAuthLogout === true
+// Unauthorized handling
+if (response.status === 401) {
+  // ❗️IMPORTANT: do NOT auto-logout on refresh endpoint
+  if (!path.startsWith("/auth/refresh")) {
     setToken(null);
     try {
       localStorage.removeItem("auth_user");
     } catch {}
-    throw new Error("unauthorized");
   }
 
-  // Other errors
+  const err = new Error("unauthorized") as any;
+  err.status = 401;
+  err.payload = data;
+  throw err;
+}
+
+
   if (!response.ok) {
     const err = new Error(data?.error || "api_error") as any;
     err.status = response.status;
@@ -142,3 +132,4 @@ export async function apiFetch<T>(
 
   return data as T;
 }
+

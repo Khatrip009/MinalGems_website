@@ -1,4 +1,3 @@
-// src/api/visitors.api.ts
 import { apiFetch } from "./client";
 
 export const VISITOR_SESSION_KEY = "mg_visitor_session_id";
@@ -37,7 +36,7 @@ export function getOrCreateVisitorSessionId(): string {
   }
 }
 
-/** Read stored visitor UUID (after identify) */
+/** Read stored visitor UUID */
 export function getStoredVisitorId(): string | null {
   try {
     return window.localStorage.getItem(VISITOR_ID_KEY);
@@ -52,11 +51,11 @@ export function getStoredVisitorId(): string | null {
 
 /**
  * POST /api/analytics/visitors/identify
- * Upserts visitor using session_id
+ * Always returns visitor_id
  */
 export async function identifyVisitor(
   meta?: Record<string, unknown>
-) {
+): Promise<string> {
   const session_id = getOrCreateVisitorSessionId();
 
   const res = await apiFetch<{
@@ -96,8 +95,6 @@ export async function trackVisitorEvent(
 
   return apiFetch<{
     ok: boolean;
-    visitor_id: string;
-    event_id: string | null;
   }>("/analytics/visitors/event", {
     method: "POST",
     body: {
@@ -110,8 +107,7 @@ export async function trackVisitorEvent(
 }
 
 /**
- * Convenience: ensure visitor is identified.
- * Call once on app startup.
+ * Convenience: call once on app startup
  */
 export async function initVisitorTracking(
   meta?: Record<string, unknown>
