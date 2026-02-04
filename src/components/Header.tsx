@@ -34,24 +34,16 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   { to: "/", label: "Home", icon: Home },
-  { to: "/products", label: "Shop All", icon: Gem },
+  { to: "/products", label: "Diamond Jewellery", icon: Gem },
   { to: "/diamonds", label: "Diamonds", icon: Sparkles },
-  { to: "/gold", label: "Gold", icon: Crown },
-  { to: "/process", label: "Craftsmanship", icon: Settings },
+  
+  
   { to: "/about", label: "Our Story", icon: Star },
 ];
 
 // Mega menu categories
 const shopCategories = [
-  {
-    title: "Gold Jewellery",
-    items: [
-      { name: "22K Gold", href: "/products?category=22k-gold" },
-      { name: "18K Gold", href: "/products?category=18k-gold" },
-      { name: "Antique Gold", href: "/products?category=antique-gold" },
-      { name: "Lightweight Gold", href: "/products?category=lightweight-gold" },
-    ]
-  },
+  
   {
     title: "Diamond Jewellery",
     items: [
@@ -317,39 +309,7 @@ export default function Header() {
 
   return (
     <>
-      {/* Top Announcement Bar - Responsive */}
-      <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-yellow-900 text-white py-1.5 sm:py-2 text-xs sm:text-sm">
-        <Container className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="flex items-center gap-1">
-              <Truck className="h-3 w-3" />
-              <span className="hidden xs:inline">Free Shipping Pan India</span>
-              <span className="xs:hidden inline">Free Shipping</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-1">
-              <Shield className="h-3 w-3" />
-              <span className="hidden md:inline">BIS Hallmark Certified</span>
-              <span className="md:hidden inline">Hallmark Certified</span>
-            </div>
-            <div className="hidden lg:flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>Since 1995</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <a href="tel:+919999999999" className="hover:text-amber-200 transition-colors flex items-center gap-1">
-              <Phone className="h-3 w-3" />
-              <span className="hidden xs:inline">+91 99999 99999</span>
-              <span className="xs:hidden inline">Call Us</span>
-            </a>
-            <div className="hidden md:flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span className="hidden lg:inline">Surat, Gujarat</span>
-              <span className="lg:hidden inline">Surat</span>
-            </div>
-          </div>
-        </Container>
-      </div>
+      
 
       {/* Main Header */}
       <motion.header

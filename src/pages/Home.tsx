@@ -285,22 +285,7 @@ export default function HomePage() {
 
         <Container className="relative z-20 flex h-full min-h-[90vh] flex-col items-center justify-center text-center px-4">
           <div className="max-w-4xl">
-            {/* Badge */}
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-yellow-300" />
-              <span className="text-sm font-medium text-white">Since 1995</span>
-            </div>
-
-            {/* Main title with gradient */}
-            <h1 className="font-['Playfair_Display'] text-5xl md:text-8xl lg:text-9xl font-bold tracking-tight mb-4">
-              <span className="bg-gradient-to-r from-yellow-200 via-yellow-100 to-white bg-clip-text text-transparent">
-                Minal
-              </span>
-              <br />
-              <span className="text-4xl md:text-6xl lg:text-7xl font-light text-white/90">
-                Gems & Jewels
-              </span>
-            </h1>
+           
 
             {/* Subtitle */}
             <p className="mx-auto mt-6 max-w-2xl text-xl md:text-2xl text-white/80 leading-relaxed">
@@ -321,35 +306,9 @@ export default function HomePage() {
                 </span>
               </Button>
 
-              <Button
-                variant="outline"
-                className="px-10 py-4 text-lg font-medium rounded-full border-2 border-white/30 bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-white/50 text-white transition-all duration-300"
-                onClick={() => navigate("/process")}
-              >
-                <span className="flex items-center gap-2">
-                  <Gem className="h-5 w-5" />
-                  Our Artistry
-                </span>
-              </Button>
+              
             </div>
 
-            {/* Trust badges */}
-            <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
-              {[
-                { icon: Shield, text: "Certified Quality", sub: "BIS Hallmark" },
-                { icon: Truck, text: "Free Shipping", sub: "Pan India" },
-                { icon: Gem, text: "Lifetime Polish", sub: "Free Service" },
-                { icon: Sparkles, text: "Custom Designs", sub: "Made to Order" }
-              ].map((item, idx) => (
-                <div key={idx} className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm mb-3">
-                    <item.icon className="h-6 w-6 text-yellow-300" />
-                  </div>
-                  <p className="font-semibold text-white text-sm">{item.text}</p>
-                  <p className="text-xs text-white/60">{item.sub}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </Container>
 

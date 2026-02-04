@@ -375,59 +375,10 @@ const DiamondPage: React.FC = () => {
               your diamond.
             </p>
 
-            <div className="mt-7 grid gap-6 md:grid-cols-2">
-              {/* Cut */}
-              <motion.div
-                whileHover={{
-                  y: -6,
-                  boxShadow:
-                    "0 26px 70px rgba(56,189,248,0.45),0 18px 50px rgba(15,23,42,0.95)",
-                }}
-                className="relative overflow-hidden rounded-2xl border border-sky-300/60 bg-gradient-to-br from-slate-900/90 via-slate-900/85 to-slate-950 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.9)] backdrop-blur-xl"
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(56,189,248,0.35),transparent_55%),radial-gradient(circle_at_100%_0%,rgba(129,140,248,0.25),transparent_55%)] opacity-70" />
-                <div className="relative">
-                  <h3 className="text-xl font-semibold text-cyan-50">Cut – the most important C</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-100/90 md:text-base">
-                    Cut is not the shape; it is the precision of angles, proportions and polish.
-                    A well-cut stone reflects light back through the top of the diamond, creating
-                    intense brilliance and fire.
-                  </p>
-                  <ul className="mt-3 ml-5 list-disc space-y-1 text-xs text-slate-100/85 md:text-sm">
-                    <li>Excellent / Very Good cuts look bright from edge to edge.</li>
-                    <li>Shallow or deep cuts leak light and look smaller or dull.</li>
-                    <li>A superior cut can make a smaller diamond out-sparkle a larger one.</li>
-                  </ul>
-                </div>
-              </motion.div>
-
-              {/* Carat */}
-              <motion.div
-                whileHover={{
-                  y: -6,
-                  boxShadow:
-                    "0 26px 70px rgba(56,189,248,0.45),0 18px 50px rgba(15,23,42,0.95)",
-                }}
-                className="relative overflow-hidden rounded-2xl border border-sky-300/60 bg-gradient-to-br from-slate-900/90 via-slate-900/85 to-slate-950 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.9)] backdrop-blur-xl"
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,rgba(59,130,246,0.35),transparent_55%),radial-gradient(circle_at_0%_100%,rgba(56,189,248,0.28),transparent_55%)] opacity-80" />
-                <div className="relative">
-                  <h3 className="text-xl font-semibold text-cyan-50">
-                    Carat – weight &amp; size
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-100/90 md:text-base">
-                    Carat is purely weight: 1&nbsp;ct = 0.2&nbsp;grams. Face-up size also depends
-                    on cut. Two 1&nbsp;ct diamonds can look different in diameter.
-                  </p>
-                  <ul className="mt-3 ml-5 list-disc space-y-1 text-xs text-slate-100/85 md:text-sm">
-                    <li>“Magic” sizes (0.50, 0.75, 1.00&nbsp;ct) often jump in price.</li>
-                    <li>A 0.90&nbsp;ct stone can look almost like 1&nbsp;ct with better value.</li>
-                    <li>Carat has no direct effect on colour or clarity grades.</li>
-                  </ul>
-                </div>
-              </motion.div>
-            </div>
+            
           </motion.section>
+          
+          
 
           {/* COLOUR SCALE */}
           <motion.section
@@ -438,7 +389,7 @@ const DiamondPage: React.FC = () => {
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
             <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-cyan-100 md:text-4xl">
-              Colour – from D to Z
+              Colour
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-sky-100/90 md:text-base">
               Most diamonds look colourless at first glance, yet subtle body tones make a big
@@ -555,133 +506,7 @@ const DiamondPage: React.FC = () => {
             </p>
           </motion.section>
 
-          {/* CARAT WEIGHT BAR */}
-          <motion.section
-            className="mb-14 rounded-3xl border border-slate-200/70 bg-slate-950/60 p-6 shadow-[0_22px_60px_rgba(15,23,42,0.9)] backdrop-blur-2xl"
-            initial={{ opacity: 0, y: 22 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-          >
-            <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-slate-50 md:text-4xl">
-              Carat Weight – visual size guide
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-200/90 md:text-base">
-              Your De&nbsp;Beers chart shows carat as a simple unit of weight, with a standard
-              metric carat of 0.2&nbsp;g. Traditionally it was based on the weight of carob
-              seeds, which are surprisingly consistent.
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-slate-200/80 md:text-sm">
-              The row of circles below mirrors your board: as carat increases, the diameter of
-              a well-cut round diamond grows. Remember, this is approximate and assumes
-              excellent proportions.
-            </p>
-
-            <div className="mt-6 flex flex-wrap items-end justify-between gap-y-4">
-              {caratScale.map((label, index) => {
-                const size = 64 - index * 4; // decreasing size
-                return (
-                  <div key={label} className="flex flex-col items-center gap-1 px-1">
-                    <div
-                      className="rounded-full border border-cyan-300/80 bg-cyan-100/70 shadow-[0_10px_28px_rgba(56,189,248,0.65)]"
-                      style={{ width: size / 2, height: size / 2 }}
-                    />
-                    <span className="text-[10px] font-medium text-slate-200">{label}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="mt-4 text-[11px] text-slate-300 md:text-xs">
-              Carat weight does <span className="font-semibold">not</span> tell you anything
-              about cut, colour or clarity. Always look at the full 4C profile.
-            </p>
-          </motion.section>
-
-          {/* SHAPES & SVG ICONS */}
-          <motion.section
-            className="mb-14"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-          >
-            <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-slate-50 md:text-4xl">
-              Diamond Shapes &amp; Popular Cuts
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-200/90 md:text-base">
-              Shape is the outline of the stone. Each shape plays with light differently and
-              suits different personalities and settings.
-            </p>
-
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-              {[
-                {
-                  title: "Round Brilliant",
-                  variant: "round" as ShapeVariant,
-                  desc: "Most popular; 57–58 facets, maximum sparkle and versatility.",
-                },
-                {
-                  title: "Princess",
-                  variant: "princess" as ShapeVariant,
-                  desc: "Square brilliant cut with sharp corners and modern look.",
-                },
-                {
-                  title: "Emerald",
-                  variant: "emerald" as ShapeVariant,
-                  desc: "Step-cut; emphasises clarity and a calm, mirror-like sparkle.",
-                },
-                {
-                  title: "Oval",
-                  variant: "oval" as ShapeVariant,
-                  desc: "Elongated brilliant; flatters the finger and often looks larger.",
-                },
-                {
-                  title: "Marquise",
-                  variant: "marquise" as ShapeVariant,
-                  desc: "Boat-shaped with pointed ends; maximises perceived size.",
-                },
-                {
-                  title: "Pear",
-                  variant: "pear" as ShapeVariant,
-                  desc: "Tear-drop with brilliant faceting; elegant for pendants and rings.",
-                },
-                {
-                  title: "Heart",
-                  variant: "heart" as ShapeVariant,
-                  desc: "Romantic shape; requires excellent symmetry to look balanced.",
-                },
-                {
-                  title: "Cushion",
-                  variant: "cushion" as ShapeVariant,
-                  desc: "Soft square with rounded corners; vintage charm and strong fire.",
-                },
-                {
-                  title: "Radiant",
-                  variant: "radiant" as ShapeVariant,
-                  desc: "Rectangular or square, combining step-cut outline with brilliant facets.",
-                },
-              ].map((s) => (
-                <motion.div
-                  key={s.title}
-                  whileHover={{
-                    y: -4,
-                    boxShadow:
-                      "0 20px 55px rgba(56,189,248,0.4),0 14px 38px rgba(15,23,42,0.9)",
-                  }}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-600/60 bg-slate-900/90 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.9)]"
-                >
-                  <div className="flex items-center gap-3">
-                    <DiamondShapeIcon variant={s.variant} />
-                    <h3 className="text-base font-semibold text-slate-50">{s.title}</h3>
-                  </div>
-                  <p className="text-xs leading-relaxed text-slate-200/90 md:text-sm">
-                    {s.desc}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
+          
 
           {/* BUYING GUIDE */}
           <motion.section

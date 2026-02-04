@@ -180,30 +180,7 @@ export default function Footer() {
       </motion.a>
 
       {/* Trust Banner */}
-      <div className="border-t border-b border-amber-100 bg-gradient-to-r from-amber-50 to-amber-100/50">
-        <Container>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-8">
-            {[
-              { icon: ShieldCheck, title: "Certified Quality", desc: "BIS Hallmark" },
-              { icon: Truck, title: "Free Shipping", desc: "Across India" },
-              { icon: CreditCard, title: "Secure Payments", desc: "SSL Encrypted" },
-              { icon: Headphones, title: "24/7 Support", desc: "Expert Guidance" }
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center gap-4">
-                <div className="flex-shrink-0">
-                  <div className="rounded-full bg-gradient-to-r from-amber-500 to-amber-600 p-3">
-                    <item.icon className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{item.title}</p>
-                  <p className="text-sm text-gray-600">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Container>
-      </div>
+      
 
       <AnimatedSection>
         <footer className="bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 text-white">
@@ -301,11 +278,8 @@ export default function Footer() {
                     <ul className="space-y-3">
                       {[
                         "Diamond Jewellery",
-                        "Gold Collections",
                         "Bridal Sets",
                         "Everyday Wear",
-                        "Antique Designs",
-                        "Custom Orders"
                       ].map((item, idx) => (
                         <li key={idx}>
                           <Link 
@@ -319,87 +293,12 @@ export default function Footer() {
                       ))}
                     </ul>
                   </div>
-                  <div>
-                    <h4 className="text-amber-400 font-semibold mb-4">Customer Services</h4>
-                    <ul className="space-y-3">
-                      {[
-                        { name: "Order Tracking", path: "/track" },
-                        { name: "Shipping Policy", path: "/shipping" },
-                        { name: "Return & Exchange", path: "/returns" },
-                        { name: "Size Guide", path: "/size-guide" },
-                        { name: "Jewellery Care", path: "/care" },
-                        { name: "FAQ", path: "/faq" }
-                      ].map((item, idx) => (
-                        <li key={idx}>
-                          <Link 
-                            to={item.path}
-                            className="text-gray-300 hover:text-amber-300 transition-colors flex items-center gap-2 group"
-                          >
-                            <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            {item.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  
                 </div>
               </div>
 
               {/* Policies & Info */}
-              <div className="space-y-8">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-amber-400" />
-                  Policies & Information
-                </h3>
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <h4 className="text-amber-400 font-semibold mb-4">Company</h4>
-                    <ul className="space-y-3">
-                      {[
-                        { name: "About Us", path: "/about" },
-                        { name: "Our Process", path: "/process" },
-                        { name: "Blog & News", path: "/blog" },
-                        { name: "Press & Media", path: "/press" },
-                        { name: "Careers", path: "/careers" },
-                        { name: "Store Locator", path: "/stores" }
-                      ].map((item, idx) => (
-                        <li key={idx}>
-                          <Link 
-                            to={item.path}
-                            className="text-gray-300 hover:text-amber-300 transition-colors flex items-center gap-2 group"
-                          >
-                            <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            {item.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-amber-400 font-semibold mb-4">Legal</h4>
-                    <ul className="space-y-3">
-                      {[
-                        { name: "Privacy Policy", path: "/privacy" },
-                        { name: "Terms of Service", path: "/terms" },
-                        { name: "Disclaimer", path: "/disclaimer" },
-                        { name: "Cookie Policy", path: "/cookies" },
-                        { name: "Payment Security", path: "/security" },
-                        { name: "BIS Certification", path: "/certification" }
-                      ].map((item, idx) => (
-                        <li key={idx}>
-                          <Link 
-                            to={item.path}
-                            className="text-gray-300 hover:text-amber-300 transition-colors flex items-center gap-2 group"
-                          >
-                            <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            {item.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              
 
               {/* Newsletter & Contact */}
               <div className="space-y-8">
@@ -521,13 +420,7 @@ export default function Footer() {
                 </p>
               </div>
 
-              <div className="text-center">
-                <p className="text-amber-300 text-sm font-medium">
-                  <Gem className="inline h-4 w-4 mr-2" />
-                  Certified BIS Hallmark Jewellery
-                </p>
-              </div>
-
+              
               <div className="text-center md:text-right">
                 <p className="text-gray-400 text-sm">
                   Designed & Developed by{" "}
