@@ -294,12 +294,7 @@ export default function ContactPage(): JSX.Element {
 
                 <div className="mt-4 space-y-3 text-base text-slate-700">
                   <div className="flex items-start gap-3">
-                    <MapPin className="mt-1 h-5 w-5 text-pink-500" />
-                    <p>
-                      33, Sant Tukaram Society-2,
-                      <br />
-                      Surat, Gujarat, India
-                    </p>
+                    
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -315,10 +310,10 @@ export default function ContactPage(): JSX.Element {
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-pink-500" />
                     <a
-                      href="mailto:khatrip.009@gmail.com"
+                      href="mailto:minalgems@gmail.com"
                       className="hover:text-pink-600"
                     >
-                      khatrip.009@gmail.com
+                      minalgems@gmail.com
                     </a>
                   </div>
                 </div>
