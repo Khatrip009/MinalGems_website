@@ -86,9 +86,7 @@ export default function CartPage() {
                     </button>
                   </div>
 
-                  <p className="text-lg text-slate-500 mt-3">
-                    ₹ {(item.unit_price * item.quantity).toLocaleString()}
-                  </p>
+                  
                 </div>
 
                 {/* Remove */}
@@ -111,19 +109,13 @@ export default function CartPage() {
 
             <div className="space-y-3 text-xl">
               <div className="flex justify-between">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-semibold">
-                  ₹ {subtotal.toLocaleString()}
-                </span>
+                
               </div>
 
               <hr className="my-4" />
 
               <div className="flex justify-between text-2xl font-semibold">
-                <span>Total</span>
-                <span className="text-rose-600">
-                  ₹ {grandTotal.toLocaleString()}
-                </span>
+                
               </div>
             </div>
 

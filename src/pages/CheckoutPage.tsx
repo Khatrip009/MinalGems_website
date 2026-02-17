@@ -102,7 +102,7 @@ interface ApplyPromoResponse {
 const stepLabels: { id: StepId; label: string }[] = [
   { id: 1, label: "Address" },
   { id: 2, label: "Review" },
-  { id: 3, label: "Payment" },
+  { id: 3, label: "Place the Order" },
   { id: 4, label: "Done" },
 ];
 
@@ -785,7 +785,7 @@ export default function CheckoutPage() {
                     Processing payment...
                   </>
                 ) : (
-                  "Complete Payment (Test)"
+                  "Place the order"
                 )}
               </Button>
             )}
@@ -920,10 +920,7 @@ function ReviewStep({
                   <p className="text-xl text-slate-500">Qty: {it.quantity}</p>
                 </div>
                 <div className="text-right text-xl font-semibold text-slate-900">
-                  <span className="inline-flex items-center gap-1">
-                    <IndianRupee className="h-4 w-4" />
-                    {((it.price || 0) * it.quantity).toFixed(2)}
-                  </span>
+                  
                 </div>
               </div>
             ))}
@@ -942,39 +939,7 @@ function ReviewStep({
             />
           </div>
 
-          {amounts && (
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-5 py-4 text-xl text-slate-600">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>
-                  <IndianRupee className="mr-1 inline h-4 w-4" />
-                  {amounts.subtotal.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Discount (incl. promos)</span>
-                <span className="text-emerald-700">
-                  -{" "}
-                  <IndianRupee className="mr-1 inline h-4 w-4" />
-                  {amounts.discount_total.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>
-                  <IndianRupee className="mr-1 inline h-4 w-4" />
-                  {amounts.shipping_total.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Taxes</span>
-                <span>
-                  <IndianRupee className="mr-1 inline h-4 w-4" />
-                  {amounts.tax_total.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          )}
+          
         </div>
       )}
     </div>
@@ -998,10 +963,10 @@ function PaymentStep({
         </div>
         <div>
           <p className="text-2xl font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Payment
+            Place the Order
           </p>
           <p className="text-xl text-slate-400">
-            For now we’ll simulate a successful payment
+            
           </p>
         </div>
       </div>
@@ -1017,62 +982,22 @@ function PaymentStep({
               onChange={() => setPaymentMethod("test")}
             />
             <span className="flex flex-col">
-              <span className="font-semibold">Test payment (recommended)</span>
+              <span className="font-semibold">Place the order for the final inquiry</span>
               <span className="text-base text-slate-500">
-                Instantly marks the order as paid for testing purposes.
+                The order details will be sent to our jewellery concierge for final review. We will call you to confirm the order and payment details before processing. This is the default and recommended option.
               </span>
             </span>
           </label>
 
-          <label className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 opacity-60">
-            <input
-              type="radio"
-              name="payment"
-              className="h-4 w-4 text-rose-500"
-              checked={paymentMethod === "card"}
-              onChange={() => setPaymentMethod("card")}
-              disabled
-            />
-            <span className="flex flex-col">
-              <span className="font-semibold">Cards / UPI (coming soon)</span>
-              <span className="text-base text-slate-500">
-                We’ll integrate a live gateway here later.
-              </span>
-            </span>
-          </label>
-
-          <label className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 opacity-60">
-            <input
-              type="radio"
-              name="payment"
-              className="h-4 w-4 text-rose-500"
-              checked={paymentMethod === "cod"}
-              onChange={() => setPaymentMethod("cod")}
-              disabled
-            />
-            <span className="flex flex-col">
-              <span className="font-semibold">
-                Cash on delivery (coming soon)
-              </span>
-              <span className="text-base text-slate-500">
-                Optionally enable COD later for selected orders.
-              </span>
-            </span>
-          </label>
-        </div>
+                  </div>
 
         {amounts && (
           <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/80 px-5 py-4 text-xl text-slate-600">
             <div className="flex justify-between text-slate-700">
               <span>Amount to pay</span>
-              <span className="font-semibold text-slate-900">
-                <IndianRupee className="mr-1 inline h-4 w-4" />
-                {amounts.grand_total.toFixed(2)}
-              </span>
             </div>
             <p className="mt-3 text-base text-slate-500">
-              This is a simulated payment. No real money will be charged, but
-              the order will move to the <strong>Paid</strong> state.
+              Our executive will be call for the order finalization and pricing confirmation.
             </p>
           </div>
         )}
@@ -1165,175 +1090,7 @@ function OrderSummaryCard({
         </div>
       </div>
 
-      {/* Promo UI */}
-      <div className="mb-5 rounded-xl border border-dashed border-rose-200 bg-rose-50/60 px-4 py-4 text-xl text-slate-700">
-        <div className="mb-3 flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/10 text-rose-500">
-            <Percent className="h-4 w-4" />
-          </span>
-          <div className="flex flex-col">
-            <span className="text-2xl font-semibold uppercase tracking-[0.16em] text-slate-600">
-              Promo & Offers
-            </span>
-            <span className="text-base text-slate-500">
-              Priority:{" "}
-              <span className="font-medium text-rose-600">
-                Percent &gt; Fixed &gt; Free Shipping
-              </span>
-            </span>
-          </div>
-        </div>
-
-        {suggestedPromo && !appliedPromo && !promoError && amounts && (
-          <button
-            type="button"
-            className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-base font-semibold text-emerald-700 hover:bg-emerald-100"
-            onClick={() => onApplySuggestedPromo(suggestedPromo.code)}
-          >
-            <Sparkles className="h-4 w-4" />
-            Use {suggestedPromo.code.toUpperCase()} &amp; save{" "}
-            {(() => {
-              const { discount } = computePromoDiscount(
-                suggestedPromo,
-                amounts.subtotal,
-                amounts.shipping_total
-              );
-              return `₹${discount.toFixed(2)}`;
-            })()}
-          </button>
-        )}
-
-        <div className="mt-3 flex items-center gap-3">
-          <input
-            type="text"
-            value={promoCodeInput}
-            onChange={(e) => {
-              setPromoCodeInput(e.target.value);
-            }}
-            placeholder={
-              appliedPromo ? appliedPromo.code.toUpperCase() : "Have a promo code?"
-            }
-            className="h-10 flex-1 rounded-full border border-slate-200 bg-white px-4 text-xl text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500"
-          />
-          <Button
-            type="button"
-            variant="primary"
-            className="h-10 px-5 text-base"
-            onClick={onApplyPromo}
-            disabled={promoApplying}
-          >
-            {promoApplying ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Applying...
-              </>
-            ) : (
-              "Apply"
-            )}
-          </Button>
-          {appliedPromo && (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 px-4 text-base"
-              onClick={onClearPromo}
-              disabled={promoApplying}
-            >
-              Remove
-            </Button>
-          )}
-        </div>
-
-        {promoError && (
-          <div className="mt-3 text-base text-rose-600">{promoError}</div>
-        )}
-
-        {appliedPromo && !promoError && (
-          <div className="mt-3 flex items-center gap-2 text-base text-emerald-700">
-            <Sparkles className="h-4 w-4" />
-            {autoApplied ? (
-              <span>
-                Best offer{" "}
-                <span className="font-semibold">
-                  {appliedPromo.code.toUpperCase()}
-                </span>{" "}
-                automatically applied to your cart.
-              </span>
-            ) : (
-              <span>
-                Promo{" "}
-                <span className="font-semibold">
-                  {appliedPromo.code.toUpperCase()}
-                </span>{" "}
-                applied.
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {loading || !amounts ? (
-        <Skeleton className="h-28 rounded-xl" />
-      ) : (
-        <div className="space-y-3 text-xl">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>
-              <IndianRupee className="mr-1 inline h-4 w-4" />
-              {amounts.subtotal.toFixed(2)}
-            </span>
-          </div>
-
-          {amounts.promo_discount > 0 && (
-            <div className="flex justify-between">
-              <span>
-                Promotion{" "}
-                {amounts.promo_code
-                  ? `(${amounts.promo_code.toUpperCase()})`
-                  : ""}
-              </span>
-              <span className="text-emerald-700">
-                -{" "}
-                <IndianRupee className="mr-1 inline h-4 w-4" />
-                {amounts.promo_discount.toFixed(2)}
-              </span>
-            </div>
-          )}
-
-          <div className="flex justify-between">
-            <span>Other discounts</span>
-            <span className="text-emerald-700">
-              -{" "}
-              <IndianRupee className="mr-1 inline h-4 w-4" />
-              {(amounts.discount_total - amounts.promo_discount)
-                .toFixed(2)
-                .toString()}
-            </span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Shipping</span>
-            <span>
-              <IndianRupee className="mr-1 inline h-4 w-4" />
-              {amounts.shipping_total.toFixed(2)}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Taxes</span>
-            <span>
-              <IndianRupee className="mr-1 inline h-4 w-4" />
-              {amounts.tax_total.toFixed(2)}
-            </span>
-          </div>
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-2xl font-semibold text-slate-900">
-            <span>Total</span>
-            <span>
-              <IndianRupee className="mr-1 inline h-5 w-5" />
-              {amounts.grand_total.toFixed(2)}
-            </span>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 }

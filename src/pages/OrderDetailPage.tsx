@@ -42,9 +42,7 @@ export default function OrderDetailPage() {
         <p className="text-gray-500">
           Placed: {order.placed_at ? new Date(order.placed_at).toLocaleString() : "—"}
         </p>
-        <p className="mt-1">
-          Status: <span className="font-medium capitalize">{order.status}</span>
-        </p>
+        
       </div>
 
       {/* ORDER ITEMS */}
@@ -60,10 +58,7 @@ export default function OrderDetailPage() {
               </div>
 
               <div className="text-right">
-                <p>₹{Number(it.unit_price).toFixed(2)}</p>
-                <p className="text-sm text-gray-500">
-                  Line Total: ₹{Number(it.line_total).toFixed(2)}
-                </p>
+                
               </div>
             </div>
           ))}
@@ -73,13 +68,7 @@ export default function OrderDetailPage() {
 
         {/* TOTALS */}
         <div className="text-right space-y-1">
-          <p>Subtotal: ₹{order.subtotal.toFixed(2)}</p>
-          <p>Discount: ₹{order.discount_total.toFixed(2)}</p>
-          <p>Tax: ₹{order.tax_total.toFixed(2)}</p>
-          <p>Shipping: ₹{order.shipping_total.toFixed(2)}</p>
-          <p className="text-lg font-semibold">
-            Grand Total: ₹{order.grand_total.toFixed(2)}
-          </p>
+          
         </div>
       </div>
 

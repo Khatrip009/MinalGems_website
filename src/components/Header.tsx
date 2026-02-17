@@ -539,47 +539,62 @@ export default function Header() {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={handleCartClick}
-                className="relative flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 hover:from-amber-100 hover:to-amber-200 transition-all group"
+                className="relative flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 hover:from-amber-100 hover:to-amber-200 transition-all group focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 aria-label="Cart"
+                title={cartCount > 0 ? `${cartCount} item${cartCount > 1 ? 's' : ''} in cart` : 'Cart is empty'}
               >
                 <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+
+                {/* Cart count badge – only shown when items exist */}
                 {cartCount > 0 && (
                   <>
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-xs font-bold text-white shadow-md">
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-xs font-bold text-black shadow-md ring-1 ring-white">
                       {cartCount}
                     </span>
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </>
                 )}
+
+                {/* Optional subtle dot when cart is empty – remove if not wanted */}
+                {cartCount === 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-gray-400 ring-2 ring-white" />
+                )}
               </button>
 
+              {/* Cart Dropdown (animated) */}
               <AnimatePresence>
                 {cartDropdownOpen && cartCount > 0 && (
                   <motion.div
-                    variants={dropdownVariants}
+                    variants={{
+                      hidden: { opacity: 0, y: -10 },
+                      visible: { opacity: 1, y: 0 },
+                      exit: { opacity: 0, y: -10 }
+                    }}
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="absolute right-0 top-full mt-2 w-[90vw] max-w-[320px] md:w-80 overflow-hidden rounded-2xl border border-amber-100 bg-white/95 shadow-2xl backdrop-blur-xl"
+                    className="absolute right-0 top-full mt-2 w-[90vw] max-w-[320px] md:w-80 overflow-hidden rounded-2xl border border-amber-100 bg-white/95 shadow-2xl backdrop-blur-xl z-50"
                   >
                     <div className="p-3 md:p-4">
                       <div className="mb-2 md:mb-3 flex items-center justify-between">
-                        <h4 className="font-semibold text-gray-900 text-sm md:text-base">Your Cart</h4>
-                        <span className="text-xs md:text-sm text-amber-600 font-medium">
+                        <h4 className="font-semibold text-black text-sm md:text-base">Your Cart</h4>
+                        <span className="text-xs md:text-sm text-black font-medium">
                           {cartCount} {cartCount === 1 ? 'item' : 'items'}
                         </span>
                       </div>
+
+                      {/* Subtotal */}
                       <div className="mb-3 md:mb-4">
                         <div className="flex items-center justify-between text-xs md:text-sm">
-                          <span className="text-gray-600">Subtotal</span>
-                          <span className="font-semibold text-gray-900">
-                            ₹{cartTotal.toLocaleString('en-IN')}
+                          <span className="text-black">Subtotal</span>
+                          <span className="font-semibold text-black">
+                            ₹{cartTotal?.toLocaleString('en-IN') || 0}
                           </span>
                         </div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          Free shipping on orders above ₹50,000
-                        </div>
+                        
                       </div>
+
+                      {/* Action Buttons */}
                       <div className="space-y-2">
                         <Link
                           to="/cart"
@@ -601,7 +616,6 @@ export default function Header() {
                 )}
               </AnimatePresence>
             </div>
-
             {/* User Profile */}
             <div className="relative" ref={profileRef}>
               {!isLoggedIn ? (

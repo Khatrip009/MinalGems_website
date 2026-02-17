@@ -165,24 +165,7 @@ export default function ProductCard({
               isHovered ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
           >
-            <div className="flex gap-3">
-              <Button
-                variant="primary"
-                className="rounded-full bg-white px-6 py-3 font-semibold text-gray-900 shadow-lg hover:bg-gray-100"
-                onClick={handleAddToCart}
-                icon={<ShoppingBag className="h-4 w-4" />}
-              >
-                Add to Cart
-              </Button>
-              <Button
-                variant="outline"
-                className="rounded-full border-white px-6 py-3 font-semibold text-black hover:bg-white/20"
-                onClick={handleQuickView}
-                icon={<Eye className="h-4 w-4" />}
-              >
-                Quick View
-              </Button>
-            </div>
+            
           </div>
 
         {/* Wishlist button – always visible, high contrast */}
@@ -281,11 +264,13 @@ export default function ProductCard({
               </Button>
               <Button
                 variant="ghost"
-                className="rounded-full border border-gray-200 p-2.5 text-gray-700 hover:bg-gray-50 hover:text-amber-700"
+                className="flex-1 rounded-full bg-grey py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-500/25  md:text-base"
                 onClick={() => onView && onView(slug)}
                 icon={<ChevronRight className="h-5 w-5" />}
                 aria-label="View details"
-              />
+              >
+                View Details
+                </Button>
             </div>
           </div>
         </div>

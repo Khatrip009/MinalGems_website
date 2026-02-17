@@ -10,6 +10,7 @@ import Button from "../components/ui/Button";
 import { getProducts } from "../api/products.api";
 import type { Product } from "../api/types";
 import { fetchCategories, type Category } from "../api/categories.api";
+import LeadForm from "../components/leads/LeadForm";
 import {
   ChevronRight,
   Sparkles,
@@ -46,6 +47,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const navigate = useNavigate();
+  const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
 
   // Load products + categories
   const loadData = useCallback(async () => {
@@ -259,6 +261,8 @@ export default function HomePage() {
     );
   }
 
+
+
   return (
     <main className="w-full overflow-x-hidden">
       {/* HERO SECTION */}
@@ -313,16 +317,16 @@ export default function HomePage() {
             {/* Main heading */}
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-['Playfair_Display'] font-bold tracking-tight leading-tight">
               <span className="bg-gradient-to-r from-amber-200 via-yellow-100 to-white bg-clip-text text-transparent">
-                Timeless
+                
               </span>
               <br />
               <span className="bg-gradient-to-r from-white via-amber-50 to-amber-100 bg-clip-text text-transparent">
-                Jewellery
+                
               </span>
             </h1>
 
             <p className="mx-auto mt-8 max-w-2xl text-xl md:text-2xl text-white/90 leading-relaxed font-light">
-              Discover handcrafted masterpieces that blend tradition with contemporary design.
+              
             </p>
 
             {/* CTA Buttons */}
@@ -336,6 +340,16 @@ export default function HomePage() {
                   <Sparkles className="h-5 w-5" />
                   Explore Collections
                   <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-2" />
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                className="group px-10 py-4 text-lg font-semibold rounded-full border-2 border-white/30 bg-transparent text-black hover:bg-white/10 transition-all duration-300"
+                onClick={() => setIsLeadFormOpen(true)}
+              >
+                <span className="flex items-center gap-3">
+                  <Sparkles className="h-5 w-5" />
+                  Inquire Now
                 </span>
               </Button>
             </div>
@@ -759,6 +773,12 @@ export default function HomePage() {
           50% { transform: translateY(-20px) rotate(180deg); }
         }
       `}</style>
+      <LeadForm
+          isOpen={isLeadFormOpen}
+          onClose={() => setIsLeadFormOpen(false)}
+          // You can optionally pass a default product interest:
+          // productInterest="Featured Collections"
+        />
     </main>
   );
 }

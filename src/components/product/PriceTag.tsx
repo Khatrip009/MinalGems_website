@@ -1,4 +1,5 @@
-import React from "react";
+// src/components/product/PriceTag.tsx
+import React, { useState } from "react";
 import {
   Sparkles,
   Tag,
@@ -8,6 +9,7 @@ import {
   PhoneCall,
   CalendarCheck,
 } from "lucide-react";
+import LeadForm from "../leads/LeadForm";          // <-- ADDED
 
 type PricingMode = "public" | "on_request" | "private";
 
@@ -25,6 +27,9 @@ interface PriceTagProps {
 
   /** IMPORTANT */
   pricingMode?: PricingMode; // default: "on_request"
+
+  /** NEW: product interest (e.g., product title) to pre‑fill in lead form */
+  productInterest?: string;
 }
 
 const currencySymbolMap: Record<string, string> = {
@@ -91,47 +96,71 @@ export default function PriceTag({
   showPerUnit = true,
   color = "default",
   pricingMode = "on_request",
+  productInterest = "",                              // <-- NEW prop
 }: PriceTagProps) {
   const symbol = currencySymbolMap[currency] || currency;
   const sizeClass = sizeClasses[size];
   const colorClass = colorClasses[color];
+
+  // ADDED state for LeadForm modal
+  const [showLeadForm, setShowLeadForm] = useState(false);
+
+  // ADDED handler for Request Price button
+  const handleRequestPrice = (e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent triggering parent card click
+    setShowLeadForm(true);
+  };
 
   /* ======================================================
      🚫 PRICE HIDDEN MODE (JEWELLERY STANDARD)
   ====================================================== */
   if (pricingMode !== "public") {
     return (
-      <div className={`space-y-4 ${className}`}>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-sm font-medium text-gray-800">
-            Price available on request
-          </span>
+      <>
+        <div className={`space-y-4 ${className}`}>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-sm font-medium text-gray-800">
+              Price available on request
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleRequestPrice}            // <-- MODIFIED
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black text-black text-sm font-semibold hover:bg-gray-900 transition"
+            >
+              <PhoneCall className="h-4 w-4" />
+              Request Price
+            </button>
+
+            {/* You can add a second button here if needed */}
+          </div>
+
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Diamond prices vary based on carat, clarity, color, cut and
+            certification. Our jewellery advisor will assist you with the best
+            available options.
+          </p>
+
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Gem className="h-3 w-3 text-amber-500" />
+            Certified diamonds • Transparent pricing • Best value assurance
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-black text-black text-sm font-semibold hover:bg-gray-900 transition">
-            <PhoneCall className="h-4 w-4" />
-            Request Price
-          </button>
-
-          <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-            <CalendarCheck className="h-4 w-4" />
-            Book Store Visit
-          </button>
-        </div>
-
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Diamond prices vary based on carat, clarity, color, cut and
-          certification. Our jewellery advisor will assist you with the best
-          available options.
-        </p>
-
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <Gem className="h-3 w-3 text-amber-500" />
-          Certified diamonds • Transparent pricing • Best value assurance
-        </div>
-      </div>
+        {/* ADDED LeadForm modal */}
+        <LeadForm
+          isOpen={showLeadForm}
+          onClose={() => setShowLeadForm(false)}
+          productInterest={productInterest}
+          initialMessage={
+            productInterest
+              ? `I am interested in "${productInterest}". Please provide price details.`
+              : "I would like to request pricing for this item."
+          }
+        />
+      </>
     );
   }
 
