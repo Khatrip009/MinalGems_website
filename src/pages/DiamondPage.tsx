@@ -6,7 +6,7 @@ import Container from "../components/layout/Container";
 import AnimatedSection from "../components/ui/AnimatedSection";
 
 /* ---------------------------------------------
- * Diamond Shape Grid Component
+ * Diamond Shape Grid Component – now with aspect‑ratio
  * -------------------------------------------*/
 type ShapeVariant =
   | "round"
@@ -28,15 +28,21 @@ interface DiamondShapeProps {
 const DiamondShapeCard: React.FC<DiamondShapeProps> = ({ variant, name, description }) => {
   return (
     <motion.div
-      className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
+      className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
       whileHover={{ y: -6 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="mb-4 flex h-48 items-center justify-center">
+      {/* Image container with fixed aspect ratio (square) */}
+      <div className="relative mb-4 w-full pt-[100%] bg-gray-100 rounded-lg overflow-hidden">
         <img
           src={`/images/diamonds/shapes/${variant}.jpg`}
           alt={`${name} cut diamond`}
-          className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
+          className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
+          onError={(e) => {
+            // Fallback if image fails to load – keeps the container visible
+            e.currentTarget.style.display = 'none';
+          }}
         />
       </div>
       <h3 className="mb-2 font-['Playfair_Display'] text-xl font-bold text-gray-900">
@@ -49,7 +55,7 @@ const DiamondShapeCard: React.FC<DiamondShapeProps> = ({ variant, name, descript
 };
 
 /* ---------------------------------------------
- * Static data
+ * Static data (unchanged)
  * -------------------------------------------*/
 const diamondShapes: DiamondShapeProps[] = [
   { variant: "round", name: "Round Brilliant", description: "The most popular cut with maximum sparkle and brilliance" },
@@ -251,46 +257,39 @@ const DiamondPage: React.FC = () => {
             </div>
           </motion.section>
 
-          {/* 1. SHAPE & CUT */}
-          {/* 1. SHAPE & CUT */}
-<motion.section
-  className="mb-12 sm:mb-16 lg:mb-20 px-4 sm:px-6 lg:px-0"
-  initial={{ opacity: 0, y: 30 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true, amount: 0.3 }}
-  transition={{ duration: 0.6 }}
->
-  <div className="mb-8 sm:mb-10">
-    
-    {/* Heading */}
-    <div className="flex items-center gap-3 sm:gap-4">
-      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-500">
-        <span className="text-lg sm:text-xl font-bold text-white">1</span>
-      </div>
+          {/* 1. SHAPE & CUT – now with aspect‑ratio cards */}
+          <motion.section
+            className="mb-12 sm:mb-16 lg:mb-20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="mb-8 sm:mb-10">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-500">
+                  <span className="text-lg sm:text-xl font-bold text-white">1</span>
+                </div>
+                <h3 className="font-['Playfair_Display'] text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+                  Shape & Cut Quality
+                </h3>
+              </div>
+              <p className="mt-3 sm:mt-4 max-w-3xl text-base sm:text-lg text-gray-700">
+                The cut determines how well a diamond interacts with light. It's the most important
+                factor affecting sparkle, fire, and brilliance.
+              </p>
+            </div>
 
-      <h3 className="font-['Playfair_Display'] text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
-        Shape & Cut Quality
-      </h3>
-    </div>
-
-    {/* Description */}
-    <p className="mt-3 sm:mt-4 max-w-3xl text-base sm:text-lg text-gray-700">
-      The cut determines how well a diamond interacts with light. It's the most important
-      factor affecting sparkle, fire, and brilliance.
-    </p>
-  </div>
-
-  {/* Cards Grid */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-    {diamondShapes.map((shape) => (
-      <DiamondShapeCard key={shape.variant} {...shape} />
-    ))}
-  </div>
-</motion.section>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {diamondShapes.map((shape) => (
+                <DiamondShapeCard key={shape.variant} {...shape} />
+              ))}
+            </div>
+          </motion.section>
 
           {/* 2. COLOR */}
           <motion.section
-            className="mb-20 rounded-3xl bg-gradient-to-br from-white to-blue-50 p-8 shadow-lg"
+            className="mb-20 rounded-3xl bg-gradient-to-br from-white to-blue-50 p-4 sm:p-6 md:p-8 shadow-lg"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
@@ -397,7 +396,7 @@ const DiamondPage: React.FC = () => {
 
           {/* 4. CARAT WEIGHT */}
           <motion.section
-            className="mb-20 rounded-3xl bg-gradient-to-br from-white to-purple-50 p-8 shadow-lg"
+            className="mb-20 rounded-3xl bg-gradient-to-br from-white to-purple-50 p-4 sm:p-6 md:p-8 shadow-lg"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
@@ -463,7 +462,7 @@ const DiamondPage: React.FC = () => {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="rounded-3xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-2xl">
+            <div className="rounded-3xl bg-gradient-to-r from-gray-900 to-gray-800 p-4 sm:p-6 md:p-8 text-white shadow-2xl">
               <h3 className="font-['Playfair_Display'] mb-6 text-3xl font-bold">
                 How to Choose Your Diamond
               </h3>
@@ -526,7 +525,7 @@ const DiamondPage: React.FC = () => {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 md:p-8 shadow-lg">
               <div className="mb-6 flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
                   <span className="text-2xl">📋</span>
@@ -551,7 +550,7 @@ const DiamondPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 md:p-8 shadow-lg">
               <div className="mb-6 flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
                   <span className="text-2xl">🌱</span>
@@ -589,7 +588,7 @@ const DiamondPage: React.FC = () => {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 p-8 text-white shadow-2xl">
+            <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 p-4 sm:p-6 md:p-8 text-white shadow-2xl">
               <h3 className="font-['Playfair_Display'] mb-4 text-2xl font-bold">
                 Personalized Consultation
               </h3>
@@ -605,7 +604,7 @@ const DiamondPage: React.FC = () => {
               </Link>
             </div>
 
-            <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-2xl">
+            <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 p-4 sm:p-6 md:p-8 text-white shadow-2xl">
               <h3 className="font-['Playfair_Display'] mb-4 text-2xl font-bold">
                 Lifetime Care Program
               </h3>
