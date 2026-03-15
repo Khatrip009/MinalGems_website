@@ -6,7 +6,7 @@ import Container from "../components/layout/Container";
 import AnimatedSection from "../components/ui/AnimatedSection";
 
 /* ---------------------------------------------
- * Diamond Shape Grid Component – with fallback
+ * Diamond Shape Grid Component – bulletproof
  * -------------------------------------------*/
 type ShapeVariant =
   | "round"
@@ -29,23 +29,19 @@ const DiamondShapeCard: React.FC<DiamondShapeProps> = ({ variant, name, descript
   const [imageError, setImageError] = useState(false);
 
   return (
-    <motion.div
-      className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Image container with fixed aspect ratio and guaranteed visibility */}
-      <div className="relative mb-4 w-full pt-[100%] bg-gray-100 rounded-lg overflow-hidden">
+    <div className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
+      {/* Fixed height image container – always visible */}
+      <div className="relative mb-4 h-48 w-full bg-gray-100 rounded-lg overflow-hidden">
         {!imageError ? (
           <img
             src={`/images/diamonds/shapes/${variant}.jpg`}
             alt={`${name} cut diamond`}
-            className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
+            className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
             loading="lazy"
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 p-4 text-center">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 p-4 text-center">
             <span className="text-sm font-medium text-gray-500">{name}</span>
           </div>
         )}
@@ -55,7 +51,7 @@ const DiamondShapeCard: React.FC<DiamondShapeProps> = ({ variant, name, descript
       </h3>
       <p className="text-sm text-gray-600">{description}</p>
       <div className="absolute bottom-0 left-0 h-1 w-0 bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-300 group-hover:w-full" />
-    </motion.div>
+    </div>
   );
 };
 
@@ -108,9 +104,9 @@ const caratExamples = [
  * -------------------------------------------*/
 const DiamondPage: React.FC = () => {
   return (
-    <main className="relative overflow-x-hidden bg-gradient-to-b from-gray-50 to-white text-gray-900">
+    <main className="relative bg-gradient-to-b from-gray-50 to-white text-gray-900">
       {/* HERO */}
-      <AnimatedSection className="relative flex min-h-[420px] md:h-[60vh] items-center justify-center overflow-hidden">
+      <AnimatedSection className="relative flex h-[60vh] items-center justify-center overflow-hidden">
         {/* Hero background */}
         <motion.div
           aria-hidden="true"
@@ -138,7 +134,7 @@ const DiamondPage: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
-            className="font-['Playfair_Display'] text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight"
+            className="font-['Playfair_Display'] text-5xl font-bold tracking-tight md:text-6xl"
             style={{
               backgroundImage:
                 "linear-gradient(135deg,#1e293b 0%,#334155 25%,#475569 50%,#64748b 75%,#94a3b8 100%)",
@@ -262,14 +258,8 @@ const DiamondPage: React.FC = () => {
             </div>
           </motion.section>
 
-          {/* 1. SHAPE & CUT – with guaranteed visibility */}
-          <motion.section
-            className="mb-12 sm:mb-16 lg:mb-20"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6 }}
-          >
+          {/* 1. SHAPE & CUT – completely visible, no animation tricks */}
+          <section className="mb-12 sm:mb-16 lg:mb-20">
             <div className="mb-8 sm:mb-10">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-500">
@@ -290,7 +280,7 @@ const DiamondPage: React.FC = () => {
                 <DiamondShapeCard key={shape.variant} {...shape} />
               ))}
             </div>
-          </motion.section>
+          </section>
 
           {/* 2. COLOR */}
           <motion.section
