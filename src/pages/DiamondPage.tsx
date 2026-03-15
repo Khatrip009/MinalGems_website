@@ -252,34 +252,41 @@ const DiamondPage: React.FC = () => {
           </motion.section>
 
           {/* 1. SHAPE & CUT */}
-          <motion.section
-            className="mb-20"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="mb-10">
-              <div className="inline-flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-500">
-                  <span className="text-xl font-bold text-white">1</span>
-                </div>
-                <h3 className="font-['Playfair_Display'] text-3xl font-bold text-gray-900">
-                  Shape & Cut Quality
-                </h3>
-              </div>
-              <p className="mt-4 max-w-3xl text-lg text-gray-700">
-                The cut determines how well a diamond interacts with light. It's the most important
-                factor affecting sparkle, fire, and brilliance.
-              </p>
-            </div>
+          {/* 1. SHAPE & CUT */}
+<motion.section
+  className="mb-12 sm:mb-16 lg:mb-20 px-4 sm:px-6 lg:px-0"
+  initial={{ opacity: 0, y: 30 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true, amount: 0.3 }}
+  transition={{ duration: 0.6 }}
+>
+  <div className="mb-8 sm:mb-10">
+    
+    {/* Heading */}
+    <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-500">
+        <span className="text-lg sm:text-xl font-bold text-white">1</span>
+      </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {diamondShapes.map((shape) => (
-                <DiamondShapeCard key={shape.variant} {...shape} />
-              ))}
-            </div>
-          </motion.section>
+      <h3 className="font-['Playfair_Display'] text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+        Shape & Cut Quality
+      </h3>
+    </div>
+
+    {/* Description */}
+    <p className="mt-3 sm:mt-4 max-w-3xl text-base sm:text-lg text-gray-700">
+      The cut determines how well a diamond interacts with light. It's the most important
+      factor affecting sparkle, fire, and brilliance.
+    </p>
+  </div>
+
+  {/* Cards Grid */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+    {diamondShapes.map((shape) => (
+      <DiamondShapeCard key={shape.variant} {...shape} />
+    ))}
+  </div>
+</motion.section>
 
           {/* 2. COLOR */}
           <motion.section
