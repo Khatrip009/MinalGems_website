@@ -33,13 +33,20 @@ const DiamondShapeCard: React.FC<DiamondShapeProps> = ({ variant, name, descript
       {/* Fixed height image container – always visible */}
       <div className="relative mb-4 h-48 w-full bg-gray-100 rounded-lg overflow-hidden">
         {!imageError ? (
-          <img
-            src={`/images/diamonds/shapes/${variant}.jpg`}
-            alt={`${name} cut diamond`}
-            className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
-            loading="lazy"
-            onError={() => setImageError(true)}
-          />
+          <div className="relative h-full w-full">
+  <img
+    src={`/images/diamonds/shapes/${variant}.jpg`}
+    alt={`${name} cut diamond`}
+    className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
+    loading="lazy"
+    onError={() => setImageError(true)}
+  />
+
+  {/* Sparkle Light Effect */}
+  <span className="pointer-events-none absolute inset-0 overflow-hidden">
+    <span className="absolute -left-40 top-0 h-full w-40 rotate-12 bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-0 transition-all duration-700 group-hover:left-full group-hover:opacity-100"></span>
+  </span>
+</div>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 p-4 text-center">
             <span className="text-sm font-medium text-gray-500">{name}</span>
