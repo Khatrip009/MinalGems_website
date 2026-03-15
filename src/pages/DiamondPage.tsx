@@ -108,9 +108,9 @@ const caratExamples = [
  * -------------------------------------------*/
 const DiamondPage: React.FC = () => {
   return (
-    <main className="relative bg-gradient-to-b from-gray-50 to-white text-gray-900">
+    <main className="relative overflow-x-hidden bg-gradient-to-b from-gray-50 to-white text-gray-900">
       {/* HERO */}
-      <AnimatedSection className="relative flex h-[60vh] items-center justify-center overflow-hidden">
+      <AnimatedSection className="relative flex min-h-[420px] md:h-[60vh] items-center justify-center overflow-hidden">
         {/* Hero background */}
         <motion.div
           aria-hidden="true"
@@ -138,7 +138,7 @@ const DiamondPage: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
-            className="font-['Playfair_Display'] text-5xl font-bold tracking-tight md:text-6xl"
+            className="font-['Playfair_Display'] text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight"
             style={{
               backgroundImage:
                 "linear-gradient(135deg,#1e293b 0%,#334155 25%,#475569 50%,#64748b 75%,#94a3b8 100%)",
