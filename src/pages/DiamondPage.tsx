@@ -1,12 +1,12 @@
 // src/pages/DiamondPage.tsx
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Container from "../components/layout/Container";
 import AnimatedSection from "../components/ui/AnimatedSection";
 
 /* ---------------------------------------------
- * Diamond Shape Grid Component – now with aspect‑ratio
+ * Diamond Shape Grid Component – with fallback
  * -------------------------------------------*/
 type ShapeVariant =
   | "round"
@@ -26,24 +26,29 @@ interface DiamondShapeProps {
 }
 
 const DiamondShapeCard: React.FC<DiamondShapeProps> = ({ variant, name, description }) => {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <motion.div
       className="group relative w-full overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
       whileHover={{ y: -6 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Image container with fixed aspect ratio (square) */}
+      {/* Image container with fixed aspect ratio and guaranteed visibility */}
       <div className="relative mb-4 w-full pt-[100%] bg-gray-100 rounded-lg overflow-hidden">
-        <img
-          src={`/images/diamonds/shapes/${variant}.jpg`}
-          alt={`${name} cut diamond`}
-          className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
-          loading="lazy"
-          onError={(e) => {
-            // Fallback if image fails to load – keeps the container visible
-            e.currentTarget.style.display = 'none';
-          }}
-        />
+        {!imageError ? (
+          <img
+            src={`/images/diamonds/shapes/${variant}.jpg`}
+            alt={`${name} cut diamond`}
+            className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-110"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 p-4 text-center">
+            <span className="text-sm font-medium text-gray-500">{name}</span>
+          </div>
+        )}
       </div>
       <h3 className="mb-2 font-['Playfair_Display'] text-xl font-bold text-gray-900">
         {name}
@@ -257,7 +262,7 @@ const DiamondPage: React.FC = () => {
             </div>
           </motion.section>
 
-          {/* 1. SHAPE & CUT – now with aspect‑ratio cards */}
+          {/* 1. SHAPE & CUT – with guaranteed visibility */}
           <motion.section
             className="mb-12 sm:mb-16 lg:mb-20"
             initial={{ opacity: 0, y: 30 }}
