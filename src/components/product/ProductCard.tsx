@@ -15,6 +15,7 @@ import {
   CheckCircle,
   ChevronRight,
 } from "lucide-react";
+import { getAssetUrl } from "@/utils/assetUrl"; // ✅ import the helper
 
 interface ProductCardProps {
   product: Product;
@@ -92,8 +93,9 @@ export default function ProductCard({
     if (onView) onView(slug);
   };
 
+  // ✅ FIX: use getAssetUrl to convert relative paths to absolute backend URLs
   const getImageUrl = () => {
-    if (primary_image) return primary_image;
+    if (primary_image) return getAssetUrl(primary_image);
     if (has3DModel) return "/images/placeholders/3d-placeholder.jpg";
     return "/images/placeholders/jewellery-placeholder.jpg";
   };
@@ -159,41 +161,32 @@ export default function ProductCard({
           {/* Dark gradient overlay on hover */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-          {/* Quick action overlay (appears on hover) */}
-          <div
-            className={`absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-all duration-300 ${
-              isHovered ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          >
-            
-          </div>
-
-        {/* Wishlist button – always visible, high contrast */}
-{onToggleWishlist && (
-  <button
-    type="button"
-    onClick={handleToggleWishlist}
-    className={`
-      absolute left-4 top-4 z-40 flex h-14 w-14 items-center justify-center
-      rounded-full shadow-lg backdrop-blur-sm transition-all duration-300
-      hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50
-      ${
-        isWishlisted
-          ? "border border-rose-200 bg-rose-50/90 text-rose-500"
-          : "border border-gray-200 bg-white/90 text-gray-800 hover:border-rose-200 hover:bg-white hover:text-rose-500"
-      }
-    `}
-    aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-  >
-    <Heart
-      className={`
-        h-7 w-7 transition-all
-        ${isWishlisted ? "scale-110 fill-rose-500" : "stroke-[1.5px]"}
-        ${isWishlistAnimating ? "animate-ping" : ""}
-      `}
-    />
-  </button>
-)}
+          {/* Wishlist button – always visible, high contrast */}
+          {onToggleWishlist && (
+            <button
+              type="button"
+              onClick={handleToggleWishlist}
+              className={`
+                absolute left-4 top-4 z-40 flex h-14 w-14 items-center justify-center
+                rounded-full shadow-lg backdrop-blur-sm transition-all duration-300
+                hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50
+                ${
+                  isWishlisted
+                    ? "border border-rose-200 bg-rose-50/90 text-rose-500"
+                    : "border border-gray-200 bg-white/90 text-gray-800 hover:border-rose-200 hover:bg-white hover:text-rose-500"
+                }
+              `}
+              aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            >
+              <Heart
+                className={`
+                  h-7 w-7 transition-all
+                  ${isWishlisted ? "scale-110 fill-rose-500" : "stroke-[1.5px]"}
+                  ${isWishlistAnimating ? "animate-ping" : ""}
+                `}
+              />
+            </button>
+          )}
 
           {/* Category badge (optional) */}
           {showCategory && category && (
@@ -264,13 +257,13 @@ export default function ProductCard({
               </Button>
               <Button
                 variant="ghost"
-                className="flex-1 rounded-full bg-grey py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-500/25  md:text-base"
+                className="flex-1 rounded-full bg-grey py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-500/25 md:text-base"
                 onClick={() => onView && onView(slug)}
                 icon={<ChevronRight className="h-5 w-5" />}
                 aria-label="View details"
               >
                 View Details
-                </Button>
+              </Button>
             </div>
           </div>
         </div>
@@ -281,7 +274,7 @@ export default function ProductCard({
     );
   }
 
-  // List layout
+  // List layout – also needs the fix
   return (
     <motion.article
       className="group relative flex overflow-hidden rounded-3xl bg-white shadow-lg shadow-gray-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
