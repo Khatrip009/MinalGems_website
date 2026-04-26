@@ -10,12 +10,12 @@ import {
   Eye,
   ShoppingBag,
   Sparkles,
-  Tag,
   Crown,
   CheckCircle,
   ChevronRight,
+  Star,
 } from "lucide-react";
-import { getAssetUrl } from "@/utils/assetUrl"; // ✅ import the helper
+import { getAssetUrl } from "@/utils/assetUrl";
 
 interface ProductCardProps {
   product: Product;
@@ -28,15 +28,15 @@ interface ProductCardProps {
   layout?: "grid" | "list";
 }
 
-// Check if URL points to a 3D model
+// Quick 3D URL check
 const is3DModel = (url: string | null): boolean => {
   if (!url) return false;
-  const lowerUrl = url.toLowerCase();
+  const lower = url.toLowerCase();
   return (
-    lowerUrl.endsWith(".glb") ||
-    lowerUrl.endsWith(".gltf") ||
-    lowerUrl.includes("model3d") ||
-    lowerUrl.includes("3d-model")
+    lower.endsWith(".glb") ||
+    lower.endsWith(".gltf") ||
+    lower.includes("model3d") ||
+    lower.includes("3d-model")
   );
 };
 
@@ -67,156 +67,141 @@ export default function ProductCard({
 
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isWishlistAnimating, setIsWishlistAnimating] = useState(false);
+  const [wishlistAnimating, setWishlistAnimating] = useState(false);
 
-  const has3DModel = model_3d_url ? is3DModel(model_3d_url) : false;
+  const has3D = model_3d_url ? is3DModel(model_3d_url) : false;
   const isPremium = price > 250000;
   const isNew = tags?.includes("new") || false;
   const isBestSeller = tags?.includes("bestseller") || false;
 
-  const handleToggleWishlist = (e: React.MouseEvent) => {
+  // Handlers
+  const toggleWishlist = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onToggleWishlist) {
-      setIsWishlistAnimating(true);
+      setWishlistAnimating(true);
       onToggleWishlist(id);
-      setTimeout(() => setIsWishlistAnimating(false), 300);
+      setTimeout(() => setWishlistAnimating(false), 300);
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const addToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onAddToCart) onAddToCart(id);
   };
 
-  const handleQuickView = (e: React.MouseEvent) => {
+  const quickView = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onView) onView(slug);
   };
 
-  // ✅ FIX: use getAssetUrl to convert relative paths to absolute backend URLs
-  const getImageUrl = () => {
-    if (primary_image) return getAssetUrl(primary_image);
-    if (has3DModel) return "/images/placeholders/3d-placeholder.jpg";
-    return "/images/placeholders/jewellery-placeholder.jpg";
-  };
+  // Image URL (safe fallback)
+  const imageUrl = primary_image
+    ? getAssetUrl(primary_image)
+    : has3D
+      ? "/images/placeholders/3d-placeholder.jpg"
+      : "/images/placeholders/jewellery-placeholder.jpg";
 
-  // Grid layout (default)
+  // ───────── GRID LAYOUT (mobile‑first) ─────────
   if (layout === "grid") {
     return (
       <motion.article
-        className="group relative flex flex-col overflow-hidden rounded-3xl bg-white shadow-lg shadow-gray-900/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
-        whileHover={{ y: -8 }}
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-amber-100/30 transition-shadow duration-300"
+        whileHover={{ y: -4 }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={() => onView && onView(slug)}
       >
-        {/* Premium crown badge */}
-        {isPremium && (
-          <div className="absolute left-4 top-4 z-30">
-            <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-500 to-amber-600 px-3 py-1.5 text-white shadow-lg">
-              <Crown className="h-3 w-3" />
-              <span className="text-xs font-bold uppercase tracking-wider">
-                Premium
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Status badges (top right) */}
-        <div className="absolute right-4 top-4 z-30 flex flex-col gap-2">
-          {isNew && (
-            <div className="rounded-full bg-gradient-to-r from-emerald-500 to-green-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-              NEW
-            </div>
-          )}
-          {isBestSeller && (
-            <div className="rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-              BESTSELLER
-            </div>
-          )}
-          {show3DBadge && has3DModel && (
-            <div className="rounded-full bg-gradient-to-r from-blue-500 to-purple-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-              3D VIEW
-            </div>
-          )}
-        </div>
-
-        {/* Image container */}
-        <div className="relative aspect-[3/4] w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Image */}
+        <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-b from-amber-50/20 to-white">
           <img
-            src={getImageUrl()}
+            src={imageUrl}
             alt={title}
-            className={`h-full w-full object-cover transition-all duration-500 ${
+            className={`h-full w-full object-cover transition duration-500 ${
               imageLoaded ? "opacity-100" : "opacity-0"
-            } ${isHovered ? "scale-110" : "scale-100"}`}
+            } group-hover:scale-105`}
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
           />
-
-          {/* Image loading skeleton */}
           {!imageLoaded && (
-            <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-200 to-gray-300" />
+            <div className="absolute inset-0 animate-pulse bg-gray-100" />
           )}
 
-          {/* Dark gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          {/* Badges (top‑left) */}
+          <div className="absolute left-2 top-2 z-20 flex flex-col gap-1 sm:left-3 sm:top-3">
+            {isPremium && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 px-2 py-0.5 text-[0.65rem] font-bold text-white shadow">
+                <Crown className="h-3 w-3" /> Premium
+              </span>
+            )}
+            {isNew && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-700 px-2 py-0.5 text-[0.65rem] font-bold text-white shadow">
+                <Sparkles className="h-3 w-3" /> New
+              </span>
+            )}
+            {isBestSeller && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 px-2 py-0.5 text-[0.65rem] font-bold text-white shadow">
+                <Star className="h-3 w-3 fill-white" /> Bestseller
+              </span>
+            )}
+            {show3DBadge && has3D && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-2 py-0.5 text-[0.65rem] font-bold text-white shadow">
+                3D
+              </span>
+            )}
+          </div>
 
-          {/* Wishlist button – always visible, high contrast */}
+          {/* Wishlist button (top‑right) – large touch target */}
           {onToggleWishlist && (
-            <button
-              type="button"
-              onClick={handleToggleWishlist}
-              className={`
-                absolute left-4 top-4 z-40 flex h-14 w-14 items-center justify-center
-                rounded-full shadow-lg backdrop-blur-sm transition-all duration-300
-                hover:scale-110 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50
-                ${
-                  isWishlisted
-                    ? "border border-rose-200 bg-rose-50/90 text-rose-500"
-                    : "border border-gray-200 bg-white/90 text-gray-800 hover:border-rose-200 hover:bg-white hover:text-rose-500"
-                }
-              `}
+            <motion.button
+              onClick={toggleWishlist}
+              className={`absolute right-2 top-2 z-20 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-sm shadow transition ${
+                isWishlisted
+                  ? "border-rose-300 bg-rose-50 text-rose-600"
+                  : "border-white/60 bg-white/30 text-gray-700 hover:bg-white hover:text-rose-500"
+              }`}
               aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
               <Heart
-                className={`
-                  h-7 w-7 transition-all
-                  ${isWishlisted ? "scale-110 fill-rose-500" : "stroke-[1.5px]"}
-                  ${isWishlistAnimating ? "animate-ping" : ""}
-                `}
+                className={`h-5 w-5 ${
+                  isWishlisted ? "fill-current scale-110" : ""
+                } ${wishlistAnimating ? "animate-ping" : ""}`}
               />
-            </button>
+            </motion.button>
           )}
 
-          {/* Category badge (optional) */}
+          {/* Category badge (bottom‑left) */}
           {showCategory && category && (
-            <div className="absolute bottom-4 left-4 z-30">
-              <div className="flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 backdrop-blur-sm">
-                <Tag className="h-3 w-3 text-amber-600" />
-                <span className="text-xs font-medium text-gray-900">{category}</span>
-              </div>
+            <div className="absolute bottom-2 left-2 z-20">
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-xs font-medium text-gray-700 backdrop-blur shadow">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {category}
+              </span>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 flex-col p-5">
-          <h3 className="mb-2 line-clamp-1 font-['Playfair_Display'] text-xl font-bold text-gray-900 transition-colors group-hover:text-amber-700 md:text-2xl">
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          {/* Title */}
+          <h3 className="font-serif text-base font-bold leading-snug text-gray-900 line-clamp-1 group-hover:text-amber-700 transition-colors sm:text-lg">
             {title}
           </h3>
 
+          {/* Short description */}
           {short_description && (
-            <p className="mb-3 line-clamp-2 text-sm text-gray-700 md:text-base">
+            <p className="mt-1 line-clamp-2 text-xs text-gray-500 sm:text-sm">
               {short_description}
             </p>
           )}
 
+          {/* Tags */}
           {tags && tags.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-1">
               {tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800"
+                  className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[0.65rem] font-medium text-gray-600"
                 >
                   {tag}
                 </span>
@@ -224,7 +209,8 @@ export default function ProductCard({
             </div>
           )}
 
-          <div className="mb-3">
+          {/* Rating */}
+          <div className="mt-2">
             <RatingStars
               rating={rating || 0}
               count={reviews_count || 0}
@@ -233,8 +219,13 @@ export default function ProductCard({
             />
           </div>
 
-          <div className="mt-auto">
-            <div className="mb-3">
+          {/* Spacer */}
+          <div className="mt-auto" />
+
+          {/* Price & Add to Cart */}
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span className="text-[0.65rem] uppercase tracking-wider text-gray-400">Price</span>
               <PriceTag
                 price={price}
                 currency={currency}
@@ -244,192 +235,167 @@ export default function ProductCard({
                 showSymbol={true}
               />
             </div>
+            <Button
+              variant="primary"
+              className="w-full rounded-full bg-gradient-to-r from-amber-500 to-amber-600 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-200/50 hover:from-amber-600 hover:to-amber-700 active:scale-95 sm:w-auto sm:py-2"
+              onClick={addToCart}
+              icon={<ShoppingBag className="h-4 w-4" />}
+            >
+              Add
+            </Button>
+          </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <Button
-                variant="primary"
-                className="flex-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-500/25 hover:from-amber-600 hover:to-amber-700 md:text-base"
-                onClick={handleAddToCart}
-                icon={<ShoppingBag className="h-4 w-4" />}
-              >
-                Add to Cart
-              </Button>
-              <Button
-                variant="ghost"
-                className="flex-1 rounded-full bg-grey py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-500/25 md:text-base"
-                onClick={() => onView && onView(slug)}
-                icon={<ChevronRight className="h-5 w-5" />}
-                aria-label="View details"
-              >
-                View Details
-              </Button>
-            </div>
+          {/* View Details (subtle) */}
+          <div className="mt-3 border-t border-gray-100 pt-3 text-center">
+            <button
+              className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-amber-600 transition-colors"
+              onClick={quickView}
+            >
+              View Details
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
-        {/* Bottom accent line on hover */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 scale-x-0 bg-gradient-to-r from-amber-400 to-amber-600 transition-transform duration-500 group-hover:scale-x-100" />
+        {/* Bottom animated line */}
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 scale-x-0 bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300 transition-transform duration-500 group-hover:scale-x-100" />
       </motion.article>
     );
   }
 
-  // List layout – also needs the fix
+  // ───────── LIST LAYOUT (horizontal) ─────────
   return (
     <motion.article
-      className="group relative flex overflow-hidden rounded-3xl bg-white shadow-lg shadow-gray-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+      className="group relative flex overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-xl hover:shadow-amber-100/30 transition-shadow duration-300"
       whileHover={{ x: 4 }}
       onClick={() => onView && onView(slug)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Image container (1/3 width) */}
-      <div className="relative w-1/3 flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Image (40% on mobile, 1/3 on larger) */}
+      <div className="relative w-[40%] flex-shrink-0 overflow-hidden bg-gradient-to-br from-amber-50/20 to-white sm:w-1/3">
         <img
-          src={getImageUrl()}
+          src={imageUrl}
           alt={title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-black/5 group-hover:opacity-0 transition" />
 
-        {/* Status badges */}
-        <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
+        {/* Badges */}
+        <div className="absolute left-1 top-1 z-20 flex flex-col gap-0.5 sm:left-2 sm:top-2">
           {isNew && (
-            <div className="rounded-full bg-emerald-500 px-2 py-1 text-xs font-bold text-white">
+            <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[0.6rem] font-bold text-white shadow">
               NEW
-            </div>
+            </span>
           )}
-          {show3DBadge && has3DModel && (
-            <div className="rounded-full bg-blue-500 px-2 py-1 text-xs font-bold text-white">
+          {show3DBadge && has3D && (
+            <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[0.6rem] font-bold text-white shadow">
               3D
-            </div>
+            </span>
           )}
         </div>
 
-        {/* Wishlist button */}
+        {/* Wishlist */}
         {onToggleWishlist && (
-          <button
-            type="button"
-            onClick={handleToggleWishlist}
-            className={`absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-md transition hover:scale-110 ${
-              isWishlisted ? "text-rose-500" : "text-gray-700 hover:text-rose-500"
+          <motion.button
+            onClick={toggleWishlist}
+            className={`absolute right-1 top-1 z-20 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-sm shadow transition sm:right-2 sm:top-2 sm:h-9 sm:w-9 ${
+              isWishlisted
+                ? "border-rose-300 bg-rose-50 text-rose-500"
+                : "border-gray-200/50 bg-white/60 text-gray-600 hover:text-rose-500"
             }`}
             aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
-            <Heart className={`h-4 w-4 ${isWishlisted ? "fill-rose-500" : ""}`} />
-          </button>
+            <Heart className={`h-4 w-4 ${isWishlisted ? "fill-current" : ""} ${wishlistAnimating ? "animate-ping" : ""}`} />
+          </motion.button>
         )}
       </div>
 
-      {/* Content (2/3 width) */}
-      <div className="flex flex-1 flex-col p-5 md:p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            {showCategory && category && (
-              <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1">
-                <Tag className="h-3 w-3 text-amber-700" />
-                <span className="text-xs font-medium text-amber-800">{category}</span>
-              </div>
-            )}
-
-            <h3 className="mb-2 font-['Playfair_Display'] text-xl font-bold text-gray-900 transition-colors group-hover:text-amber-700 md:text-2xl">
-              {title}
-            </h3>
-
-            {short_description && (
-              <p className="mb-3 line-clamp-2 text-sm text-gray-700 md:text-base">
-                {short_description}
-              </p>
-            )}
-
-            {tags && tags.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {tags.slice(0, 4).map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <RatingStars
-                  rating={rating || 0}
-                  count={reviews_count || 0}
-                  showCount={true}
-                  size="sm"
-                />
-                <div className="mt-2">
-                  <PriceTag
-                    price={price}
-                    currency={currency}
-                    per="piece"
-                    size="lg"
-                    color="amber"
-                    showSymbol={true}
-                  />
-                </div>
-              </div>
-
-              {/* Feature icons */}
-              <div className="flex flex-col gap-1 text-sm">
-                {has3DModel && (
-                  <div className="flex items-center gap-1 text-blue-600">
-                    <Sparkles className="h-4 w-4" />
-                    <span>3D Available</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1 text-emerald-600">
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Hallmarked</span>
-                </div>
-              </div>
+      {/* Content */}
+      <div className="flex flex-1 flex-col justify-between p-3 sm:p-5">
+        <div>
+          {showCategory && category && (
+            <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 sm:mb-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {category}
+            </span>
+          )}
+          <h3 className="font-serif text-sm font-bold text-gray-900 line-clamp-2 group-hover:text-amber-700 transition-colors sm:text-lg">
+            {title}
+          </h3>
+          {short_description && (
+            <p className="mt-1 line-clamp-2 text-xs text-gray-500 sm:text-sm">
+              {short_description}
+            </p>
+          )}
+          {tags && tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[0.6rem] font-medium text-gray-600"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2 text-[0.65rem] text-gray-500 sm:text-xs">
+            {has3D && (
+              <span className="inline-flex items-center gap-1 text-blue-600">
+                <Sparkles className="h-3 w-3" /> 3D Available
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 text-emerald-600">
+              <CheckCircle className="h-3 w-3" /> Hallmarked
+            </span>
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Button
-            variant="primary"
-            className="rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2 text-sm font-semibold text-white hover:from-amber-600 hover:to-amber-700 md:px-6 md:text-base"
-            onClick={handleAddToCart}
-            icon={<ShoppingBag className="h-4 w-4" />}
-          >
-            Add to Cart
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-full border-amber-200 px-5 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 md:px-6 md:text-base"
-            onClick={handleQuickView}
-            icon={<Eye className="h-4 w-4" />}
-          >
-            View Details
-          </Button>
-          {onToggleWishlist && (
-            <Button
-              variant="ghost"
-              className={`rounded-full border border-gray-200 px-3 py-2 ${
-                isWishlisted
-                  ? "text-rose-500 hover:bg-rose-50"
-                  : "text-gray-700 hover:bg-gray-50"
-              }`}
-              onClick={handleToggleWishlist}
-              icon={<Heart className={`h-4 w-4 ${isWishlisted ? "fill-rose-500" : ""}`} />}
+        <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <RatingStars
+              rating={rating || 0}
+              count={reviews_count || 0}
+              size="sm"
+              showCount={true}
             />
-          )}
+            <PriceTag
+              price={price}
+              currency={currency}
+              per="piece"
+              size="lg"
+              color="amber"
+              showSymbol={true}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="rounded-full border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 active:scale-95 sm:px-4 sm:text-sm"
+              onClick={quickView}
+              icon={<Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
+            >
+              Details
+            </Button>
+            <Button
+              variant="primary"
+              className="rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-amber-200/50 hover:from-amber-600 hover:to-amber-700 active:scale-95 sm:px-4 sm:text-sm"
+              onClick={addToCart}
+              icon={<ShoppingBag className="h-3 w-3 sm:h-4 sm:w-4" />}
+            >
+              Add
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Hover arrow */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 transform opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-        <div className="rounded-l-full bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2">
-          <ChevronRight className="h-6 w-6 text-white" />
+      {/* Right‑edge arrow (desktop only) */}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300 sm:block">
+        <div className="rounded-l-full bg-gradient-to-r from-amber-400 to-amber-500 p-2 text-white shadow-lg">
+          <ChevronRight className="h-5 w-5" />
         </div>
       </div>
     </motion.article>

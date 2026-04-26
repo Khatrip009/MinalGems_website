@@ -17,768 +17,323 @@ import {
   Gem,
   Loader2,
   Award,
-  Eye,
   Clock,
   Truck,
-  AlertCircle
+  Eye,
 } from "lucide-react";
 
-// Utility to check if URL is a 3D model
-const is3DModel = (url: string | null): boolean => {
-  if (!url) return false;
-  const lowerUrl = url.toLowerCase();
-  return lowerUrl.endsWith('.glb') ||
-    lowerUrl.endsWith('.gltf') ||
-    lowerUrl.includes('model3d') ||
-    lowerUrl.includes('3d-model');
-};
+// ── Helper: category image with multiple keywords ──
+function getCategoryImage(slug?: string | null, name?: string | null): string {
+  const key = ((slug ?? "") + " " + (name ?? "")).toLowerCase();
+  const imageMap: [string, string][] = [
+    ["diamond", "diamond.png"],
+    ["bridal", "bridal.png"],
+    ["wedding", "bridal.png"],
+    ["daily", "daily.png"],
+    ["everyday", "daily.png"],
+    ["earring", "earrings.png"],
+    ["necklace", "necklace.png"],
+    ["pendant", "pendant.png"],
+    ["ring", "rings.png"],
+    ["bracelet", "bracelet.png"],
+    ["bangle", "bangle.png"],
+    ["gold", "gold01.png"],
+  ];
+  for (const [keyword, file] of imageMap) {
+    if (key.includes(keyword)) return `/images/categories/${file}`;
+  }
+  return "/images/categories/gold01.png";
+}
 
-// Utility to get appropriate placeholder
-const getImagePlaceholder = (product: any): string => {
-  if (product?.primary_image) return product.primary_image;
-  if (product?.images?.length > 0) return product.images[0];
-  if (product?.model_3d_url) return "/images/placeholders/3d-placeholder.jpg";
-  return "/images/placeholders/jewellery-placeholder.jpg";
-};
+// Fallback categories if API fails
+const FALLBACK_CATEGORIES = [
+  { id: "1", name: "Gold Jewellery", description: "Pure 22K & 18K gold", slug: "gold", product_count: 45 },
+  { id: "2", name: "Diamond Jewellery", description: "Certified diamonds", slug: "diamond", product_count: 32 },
+  { id: "3", name: "Bridal Collection", description: "Wedding & ceremonies", slug: "bridal", product_count: 28 },
+  { id: "4", name: "Daily Wear", description: "Lightweight everyday pieces", slug: "daily", product_count: 36 },
+];
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
   const navigate = useNavigate();
   const [isLeadFormOpen, setIsLeadFormOpen] = useState(false);
 
-  // Load products + categories
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
       const [productsRes, categoriesRes] = await Promise.allSettled([
         getProducts(),
         fetchCategories(),
       ]);
-
-      // Handle products response
-      if (productsRes.status === 'fulfilled' && productsRes.value.ok) {
-        const productsData = productsRes.value.products || [];
-        console.log('API products response:', productsData); // Debug
-
-        const normalizedProducts: Product[] = productsData.map((p: any) => {
-          const model3dUrl = p.model_3d_url ?? null;
-          const has3DModel = model3dUrl ? is3DModel(model3dUrl) : false;
-
-          return {
-            id: p.id,
-            slug: p.slug,
-            title: p.title,
-            short_description: p.short_description ?? "",
-            price: Number(p.price),
-            currency: p.currency ?? "INR",
-            primary_image: getImagePlaceholder(p),
-            model_3d_url: model3dUrl,
-            has_3d_model: has3DModel,
-            category: p.category || null,
-            tags: p.tags || [],
-            images: p.images || [],
-            sku: p.sku || "",
-            stock_status: p.stock_status || "in_stock",
-            rating: p.rating || 0,
-            reviews_count: p.reviews_count || 0,
-            is_featured: p.is_featured || false,
-            is_best_seller: p.is_best_seller || false,
-            weight: p.weight || null,
-            dimensions: p.dimensions || null,
-            metal_type: p.metal_type || null,
-            stone_type: p.stone_type || null,
-            created_at: p.created_at || new Date().toISOString(),
-            updated_at: p.updated_at || new Date().toISOString()
-          };
-        });
-
-        console.log('Normalized products:', normalizedProducts.length); // Debug
-        setProducts(normalizedProducts);
+      // Products
+      if (productsRes.status === "fulfilled" && productsRes.value.ok) {
+        const raw = productsRes.value.products || [];
+        const normalized = raw.map((p: any) => ({
+          ...p,
+          price: Number(p.price ?? 0),
+          currency: p.currency ?? "INR",
+          primary_image: p.primary_image ?? null,
+          model_3d_url: p.model_3d_url ?? null,
+          rating: Number(p.rating ?? 0),
+          reviews_count: Number(p.reviews_count ?? 0),
+          is_featured: Boolean(p.is_featured),
+          tags: Array.isArray(p.tags) ? p.tags : [],
+        }));
+        setProducts(normalized);
       } else {
-        console.error("Failed to load products:", productsRes);
         setProducts([]);
       }
-
-      // Handle categories response
-      if (categoriesRes.status === 'fulfilled' && categoriesRes.value.ok) {
-        setCategories(categoriesRes.value.categories || []);
+      // Categories
+      if (categoriesRes.status === "fulfilled" && categoriesRes.value.ok) {
+        const cats = categoriesRes.value.categories || [];
+        setCategories(cats.length ? cats : (FALLBACK_CATEGORIES as Category[]));
       } else {
-        console.error("Failed to load categories:", categoriesRes);
-        setCategories([]);
+        setCategories(FALLBACK_CATEGORIES as Category[]);
       }
     } catch (err: any) {
-      console.error("Error loading data:", err);
-      setError(err.message || "Failed to load products");
-      setProducts([]);
-      setCategories([]);
+      setError(err.message);
+      setCategories(FALLBACK_CATEGORIES as Category[]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  // Category image mapping
-  const getCategoryImage = useCallback((slug?: string | null, name?: string | null) => {
-    const key = (slug || name || "").toLowerCase().trim();
+  const categoryItems = categories.map((cat) => ({
+    id: cat.id,
+    label: cat.name,
+    description: cat.description || `Explore our ${cat.name} collection`,
+    img: getCategoryImage(cat.slug, cat.name),
+    link: `/products?category=${encodeURIComponent(cat.slug || cat.id)}`,
+    count: cat.product_count || 0,
+  }));
 
-    const imageMap: Record<string, string> = {
-      "gold": "/images/categories/gold01.png",
-      "diamond": "/images/categories/diamond.png",
-      "bridal": "/images/categories/bridal.png",
-      "daily": "/images/categories/daily.png",
-      "earrings": "/images/categories/earrings.png",
-      "necklaces": "/images/categories/necklace.png",
-      "rings": "/images/categories/rings.png",
-      "bracelets": "/images/categories/bracelet.png",
-    };
-
-    for (const [pattern, image] of Object.entries(imageMap)) {
-      if (key.includes(pattern)) return image;
-    }
-    return "/images/categories/gold01.png";
-  }, []);
-
-  const categoryItems = categories.length > 0
-    ? categories.map((cat) => ({
-      id: cat.id,
-      label: cat.name,
-      description: cat.description || `Explore our ${cat.name} collection`,
-      img: getCategoryImage(cat.slug, cat.name),
-      link: `/products?category=${encodeURIComponent(cat.slug || cat.id)}`,
-      count: cat.product_count || 0
-    }))
-    : [
-      {
-        id: "1",
-        label: "Gold Jewellery",
-        description: "Pure 22K & 18K gold collections",
-        img: "/images/categories/gold01.png",
-        link: "/products?category=gold",
-        count: 45
-      },
-      {
-        id: "2",
-        label: "Diamond Jewellery",
-        description: "Certified diamond jewellery",
-        img: "/images/categories/diamond.png",
-        link: "/products?category=diamond",
-        count: 32
-      },
-      {
-        id: "3",
-        label: "Bridal Collection",
-        description: "Wedding & ceremonial collections",
-        img: "/images/categories/bridal.png",
-        link: "/products?category=bridal",
-        count: 28
-      },
-      {
-        id: "4",
-        label: "Daily Wear",
-        description: "Lightweight everyday pieces",
-        img: "/images/categories/daily.png",
-        link: "/products?category=daily",
-        count: 36
-      },
-    ];
-
-  // Featured products – first 8
-  const featuredProducts = products.slice(0, 8);
+  const featured = products.slice(0, 8);
 
   const features = [
-    {
-      icon: Award,
-      title: "Expert Craftsmanship",
-      description: "Handcrafted by master artisans with 25+ years experience"
-    },
-    {
-      icon: Clock,
-      title: "Lifetime Service",
-      description: "Maintenance and repair services [charges applicable]"
-    },
-    {
-      icon: Truck,
-      title: "Secure Delivery",
-      description: "Insured shipping with real-time tracking"
-    }
+    { icon: Award, title: "Expert Craftsmanship", description: "Handcrafted by master artisans with 25+ years experience" },
+    { icon: Clock, title: "Lifetime Service", description: "Maintenance and repair services [charges applicable]" },
+    { icon: Truck, title: "Secure Delivery", description: "Insured shipping with real-time tracking" },
   ];
 
-  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <Loader2 className="h-16 w-16 animate-spin text-amber-600 mx-auto" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-50/50 to-transparent blur-xl"></div>
-          </div>
-          <p className="mt-6 text-lg text-gray-600 font-medium">Loading our exquisite collection...</p>
-          <p className="mt-2 text-sm text-gray-500">Crafted with precision and care</p>
-        </div>
+      <div className="h-screen flex items-center justify-center bg-white">
+        <Loader2 className="h-12 w-12 animate-spin text-amber-600" />
+        <p className="ml-4 text-lg text-gray-600">Loading…</p>
       </div>
     );
   }
 
-  // Error state
-  if (error) {
+  if (error && products.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="relative inline-flex mb-6">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center shadow-lg">
-              <Gem className="h-12 w-12 text-red-400" />
-            </div>
-            <div className="absolute -inset-4 bg-gradient-to-r from-red-100/50 to-pink-100/50 rounded-full blur-xl"></div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">Something went wrong</h3>
-          <p className="text-gray-600 mb-8">{error}</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              onClick={loadData}
-              variant="primary"
-              className="rounded-full px-8"
-            >
-              Try Again
-            </Button>
-            <Button
-              onClick={() => navigate("/")}
-              variant="outline"
-              className="rounded-full px-8"
-            >
-              Go Home
-            </Button>
-          </div>
-        </div>
+      <div className="h-screen flex flex-col items-center justify-center bg-white p-4">
+        <Gem className="h-16 w-16 text-red-400 mb-4" />
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Oops!</h3>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <Button onClick={loadData} variant="primary" className="rounded-full px-8">Retry</Button>
       </div>
     );
   }
-
-
 
   return (
     <main className="w-full overflow-x-hidden">
-      {/* HERO SECTION */}
-      <section className="relative min-h-[90vh] w-full overflow-hidden bg-gradient-to-br from-gray-900 via-purple-900/90 to-amber-900/80">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[url('/images/patterns/diamond-pattern.svg')] opacity-5"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30"></div>
-        </div>
-
-        <div className="absolute inset-0">
-          <img
-            src="/images/hero/hero1.jpg"
-            alt="Luxury Diamond Jewellery Collection"
-            className="h-full w-full object-cover object-center opacity-50"
-            loading="eager"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/images/placeholders/hero-placeholder.jpg";
-            }}
-          />
-        </div>
-
-        {/* Floating sparkles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(15)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                width: `${Math.random() * 4 + 2}px`,
-                height: `${Math.random() * 4 + 2}px`,
-                backgroundColor: '#ffffff',
-                borderRadius: '50%',
-                opacity: Math.random() * 0.5 + 0.3,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${Math.random() * 2 + 2}s`,
-                filter: 'blur(1px)'
-              }}
-            />
-          ))}
-        </div>
-
-        <Container className="relative z-20 flex h-full min-h-[90vh] flex-col items-center justify-center text-center px-4">
-          <div className="max-w-5xl">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 backdrop-blur-sm border border-amber-400/30 px-6 py-3 mb-8">
-              <Sparkles className="h-5 w-5 text-amber-300" />
-              <span className="text-sm font-semibold text-white/90">ETERNAL ELEGANCE</span>
-            </div>
-
-            {/* Main heading */}
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-['Playfair_Display'] font-bold tracking-tight leading-tight">
-              <span className="bg-gradient-to-r from-amber-200 via-yellow-100 to-white bg-clip-text text-transparent">
-                
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-white via-amber-50 to-amber-100 bg-clip-text text-transparent">
-                
-              </span>
-            </h1>
-
-            <p className="mx-auto mt-8 max-w-2xl text-xl md:text-2xl text-white/90 leading-relaxed font-light">
-              
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button
-                variant="primary"
-                className="group px-10 py-4 text-lg font-semibold rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 transition-all duration-300 transform hover:-translate-y-1"
-                onClick={() => navigate("/products")}
-              >
-                <span className="flex items-center gap-3">
-                  <Sparkles className="h-5 w-5" />
-                  Explore Collections
-                  <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-2" />
-                </span>
-              </Button>
-              <Button
-                variant="outline"
-                className="group px-10 py-4 text-lg font-semibold rounded-full border-2 border-white/30 bg-transparent text-black hover:bg-white/10 transition-all duration-300"
-                onClick={() => setIsLeadFormOpen(true)}
-              >
-                <span className="flex items-center gap-3">
-                  <Sparkles className="h-5 w-5" />
-                  Inquire Now
-                </span>
-              </Button>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="mt-16 pt-8 border-t border-white/10">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                {[
-                  { value: "25+", label: "Years of Excellence" },
-                  { value: "10K+", label: "Happy Customers" },
-                  { value: "5000+", label: "Unique Designs" }
-                ].map((stat, idx) => (
-                  <div key={idx} className="text-center">
-                    <div className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</div>
-                    <div className="text-sm text-white/70">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* ────── HERO ────── */}
+      <section className="relative min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900/90 to-amber-900/80 px-4">
+        <img
+          src="/images/hero/hero1.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-40"
+          onError={(e) => (e.target.src = "/images/placeholders/hero-placeholder.jpg")}
+        />
+        <div className="relative z-10 text-center max-w-4xl mx-auto text-white">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 px-5 py-2 mb-6">
+            <Sparkles className="h-4 w-4 text-amber-300" />
+            <span className="text-xs font-semibold uppercase tracking-widest">Eternal Elegance</span>
           </div>
-        </Container>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="h-16 w-px bg-gradient-to-b from-amber-300 via-yellow-200 to-transparent"></div>
+          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold leading-tight mb-6">
+            <span className="bg-gradient-to-r from-amber-200 to-white bg-clip-text text-transparent">Discover</span><br />
+            <span className="bg-gradient-to-r from-white to-amber-100 bg-clip-text text-transparent">Timeless Beauty</span>
+          </h1>
+          <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto mb-10">
+            Handcrafted jewellery where heritage meets modern elegance.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button onClick={() => navigate("/products")} variant="primary" className="rounded-full px-8 py-4 font-semibold">
+              Explore Collection <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button onClick={() => setIsLeadFormOpen(true)} variant="outline" className="rounded-full px-8 py-4 font-semibold border-white/40 text-white hover:bg-white/10">
+              Inquire Now
+            </Button>
+          </div>
+          <div className="mt-12 grid grid-cols-3 gap-4 text-center border-t border-white/10 pt-8">
+            {[
+              { value: "25+", label: "Years of Excellence" },
+              { value: "10K+", label: "Happy Customers" },
+              { value: "5000+", label: "Unique Designs" },
+            ].map((stat, i) => (
+              <div key={i}>
+                <div className="text-2xl sm:text-3xl font-bold">{stat.value}</div>
+                <div className="text-xs sm:text-sm text-white/70">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* FEATURES SECTION */}
-      <AnimatedSection className="py-16 md:py-20 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0 bg-[url('/images/patterns/grid.svg')]"></div>
-        </div>
-
-        <Container className="relative z-10">
-          <div className="text-center mb-12 md:mb-16">
-            <SectionTitle
-              title="Why Choose Minal Gems"
-              subtitle="Excellence in every detail"
-              align="center"
-            />
-          </div>
-
-          <div className="mx-auto max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {features.map((feature, index) => (
+      {/* ────── FEATURES ────── */}
+      <AnimatedSection className="py-14 bg-white">
+        <Container>
+          <SectionTitle title="Why Choose Minal Gems" subtitle="Excellence in every detail" align="center" />
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {features.map((feat, i) => (
               <motion.div
-                key={index}
+                key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="group"
+                transition={{ delay: i * 0.1 }}
+                className="flex flex-col items-center text-center p-6 bg-gray-50 rounded-2xl"
               >
-                <div className="relative bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-amber-200 hover:-translate-y-2">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <div className="relative w-16 h-16 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow duration-500">
-                      <feature.icon className="h-8 w-8 text-amber-600 group-hover:scale-110 transition-transform duration-500" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-amber-700 transition-colors duration-300">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm md:text-base leading-relaxed">
-                    {feature.description}
-                  </p>
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-20 bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                  <feat.icon className="h-7 w-7 text-amber-600" />
                 </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{feat.title}</h3>
+                <p className="text-gray-600">{feat.description}</p>
               </motion.div>
             ))}
           </div>
         </Container>
       </AnimatedSection>
 
-      {/* CATEGORIES SECTION */}
-      <AnimatedSection className="py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white">
+      {/* ────── CATEGORIES ────── */}
+      <AnimatedSection className="py-14 bg-gradient-to-b from-gray-50 to-white">
         <Container>
-          <div className="text-center mb-12 md:mb-16">
-            <SectionTitle
-              title="Browse by Category"
-              subtitle="Discover our curated collections"
-              align="center"
-            />
-            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-              Each category features handpicked pieces that embody our commitment to quality and design
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+          <SectionTitle title="Browse by Category" subtitle="Curated collections" align="center" />
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {categoryItems.map((cat) => (
               <Link
                 key={cat.id}
                 to={cat.link}
-                className="group relative overflow-hidden rounded-3xl bg-white shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                className="group bg-white rounded-2xl shadow hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden border border-gray-100"
               >
-                <div className="relative h-56 md:h-64 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                <div className="h-48 sm:h-56 bg-gray-50 flex items-center justify-center p-6">
                   <img
                     src={cat.img}
                     alt={cat.label}
-                    className="h-full w-full object-contain p-6 transition-all duration-700 group-hover:scale-110 group-hover:rotate-2"
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/images/categories/gold01.png";
-                    }}
+                    className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-110"
+                    onError={(e) => (e.target.src = "/images/categories/gold01.png")}
                   />
-                  {cat.label.toLowerCase().includes('diamond') && (
-                    <div className="absolute top-4 right-4">
-                      <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 backdrop-blur-md shadow-lg">
-                        <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
-                        <span className="text-xs font-semibold text-white">3D VIEW</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
-                <div className="p-6 md:p-7">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 group-hover:text-amber-700 transition-colors duration-300">
-                      {cat.label}
-                    </h3>
-                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-2 transition-all duration-300" />
-                  </div>
-                  <p className="text-gray-600 text-sm md:text-base mb-4">{cat.description}</p>
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-amber-700 transition-colors">{cat.label}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{cat.description}</p>
                   {cat.count > 0 && (
-                    <div className="pt-4 border-t border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-amber-700">
-                          {cat.count} {cat.count === 1 ? 'piece' : 'pieces'}
-                        </span>
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-amber-700 transition-colors flex items-center gap-1">
-                          Explore <ChevronRight className="h-4 w-4" />
-                        </span>
-                      </div>
-                    </div>
+                    <p className="text-xs text-amber-700 mt-2 font-medium">{cat.count} pieces</p>
                   )}
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-700"></div>
               </Link>
             ))}
-          </div>
-
-          <div className="mt-12 md:mt-16 text-center">
-            <Button
-              variant="outline"
-              className="group px-8 py-3.5 text-lg font-medium rounded-full border-2 border-gray-300 hover:border-amber-500 hover:bg-amber-50 text-gray-700 hover:text-amber-700 transition-all duration-300"
-              onClick={() => navigate("/categories")}
-            >
-              <span className="flex items-center gap-3">
-                View All Categories
-                <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-2" />
-              </span>
-            </Button>
           </div>
         </Container>
       </AnimatedSection>
 
-      {/* FEATURED PRODUCTS */}
-      <AnimatedSection className="py-16 md:py-24 bg-white">
+      {/* ────── FEATURED PRODUCTS ────── */}
+      <AnimatedSection className="py-14 bg-white">
         <Container>
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12 md:mb-16">
-            <div className="lg:w-2/3">
-              <SectionTitle
-                title="Featured Collections"
-                subtitle="Our most popular creations"
-              />
-              <p className="mt-3 text-gray-600 text-lg max-w-3xl">
-                Discover handpicked pieces that showcase exceptional craftsmanship and timeless design
-              </p>
-            </div>
-            <div className="lg:w-1/3 lg:text-right">
-              <Button
-                variant="primary"
-                className="rounded-full px-8 py-3.5"
-                onClick={() => navigate("/products")}
-              >
-                <span className="flex items-center gap-2">
-                  Shop All
-                  <ChevronRight className="h-5 w-5" />
-                </span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-8">
-            {featuredProducts.length === 0 && (
-              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-amber-800">
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                <span>No products loaded yet. Check the browser console for logs. If this persists, the API may be returning an empty list.</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto rounded-full border-amber-300 text-amber-700 hover:bg-amber-100"
-                  onClick={loadData}
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
+          <SectionTitle title="Featured Collections" subtitle="Our most popular creations" align="center" />
+          <div className="mt-10">
             <ProductGrid
-              products={featuredProducts}
-              loading={false}
+              products={featured}
               onViewProduct={(slug) => navigate(`/products/${slug}`)}
               onAddToCart={(id) => console.log("Add to cart", id)}
               onToggleWishlist={(id) => console.log("Toggle wishlist", id)}
               show3DBadge={true}
               showCategory={true}
-              emptyStateMessage="No featured products available at the moment."
-              emptyStateAction={() => navigate("/products")}
+              emptyStateMessage="No featured products yet."
             />
+          </div>
+          <div className="text-center mt-8">
+            <Button onClick={() => navigate("/products")} variant="outline" className="rounded-full px-6 py-3">
+              View All Products <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </Container>
       </AnimatedSection>
 
-      {/* 3D EXPERIENCE BANNER (only if any product has 3D) */}
-      {products.some(p => p.has_3d_model) && (
-        <AnimatedSection className="py-16 md:py-20 bg-gradient-to-r from-gray-900 via-purple-900 to-blue-900 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full bg-gradient-to-r from-blue-500/30 to-purple-500/30 blur-3xl"
-                style={{
-                  width: `${Math.random() * 300 + 100}px`,
-                  height: `${Math.random() * 300 + 100}px`,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animation: `float ${Math.random() * 20 + 10}s infinite ease-in-out`,
-                  animationDelay: `${Math.random() * 5}s`
-                }}
-              />
-            ))}
-          </div>
-
-          <Container className="relative z-10">
-            <div className="rounded-3xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 backdrop-blur-xl border border-white/20 p-8 md:p-12 lg:p-16">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-8 md:gap-12">
-                <div className="lg:w-2/3">
-                  <div className="inline-flex items-center gap-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/30 px-5 py-2.5 mb-6">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-white rounded-full blur-md"></div>
-                      <Sparkles className="h-5 w-5 text-white relative" />
-                    </div>
-                    <span className="text-sm font-semibold text-white/90 tracking-wider">
-                      INNOVATIVE SHOPPING
-                    </span>
-                  </div>
-                  <h3 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-                    Experience Jewellery in 360°
-                  </h3>
-                  <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl">
-                    Rotate, zoom, and explore our diamond collection in stunning 3D detail.
-                    See every facet and sparkle before making your choice.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Button
-                      variant="primary"
-                      className="rounded-full px-8 py-4 bg-white text-gray-900 hover:bg-gray-100 font-semibold text-lg shadow-2xl shadow-white/20"
-                      onClick={() => navigate("/products?has3d=true")}
-                    >
-                      <span className="flex items-center gap-3">
-                        <Eye className="h-6 w-6" />
-                        Explore 3D Collection
-                      </span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-full px-8 py-4 border-2 border-white/30 bg-transparent text-white hover:bg-white/10 font-semibold text-lg"
-                      onClick={() => navigate("/guide/3d-viewer")}
-                    >
-                      How It Works
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="lg:w-1/3 flex justify-center">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-full blur-2xl"></div>
-                    <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-white/20 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-5xl md:text-6xl font-bold text-white mb-2">
-                          {products.filter(p => p.has_3d_model).length}
-                        </div>
-                        <div className="text-white/80 text-lg">3D Models</div>
-                        <div className="text-white/60 text-sm mt-2">Available Now</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* ────── 3D BANNER (conditional) ────── */}
+      {products.some(p => p.model_3d_url) && (
+        <AnimatedSection className="py-14 bg-gray-900 text-white">
+          <Container className="text-center">
+            <Eye className="h-10 w-10 mx-auto text-amber-400 mb-4" />
+            <h3 className="text-3xl font-serif font-bold mb-4">Experience in 360°</h3>
+            <p className="text-lg text-white/70 max-w-xl mx-auto mb-6">
+              Rotate and zoom our diamond collection in stunning 3D.
+            </p>
+            <Button onClick={() => navigate("/products?has3d=true")} variant="primary" className="rounded-full px-8 py-4">
+              Explore 3D Collection
+            </Button>
           </Container>
         </AnimatedSection>
       )}
 
-      {/* ABOUT SECTION */}
-      <AnimatedSection className="py-16 md:py-24 bg-gradient-to-br from-gray-50 via-white to-amber-50/30">
-        <Container>
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div className="relative order-2 lg:order-1">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-                <img
-                  src="/images/hero/feature.jpg"
-                  alt="Master Artisan Crafting Jewellery"
-                  className="w-full h-[500px] md:h-[600px] object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/images/placeholders/craftsmanship.jpg";
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-              </div>
-
-              <div className="absolute -top-4 -left-4 w-20 h-20 border-4 border-amber-300/30 rounded-2xl -z-10"></div>
-              <div className="absolute -bottom-4 -right-4 w-28 h-28 border-4 border-amber-400/20 rounded-2xl -z-10"></div>
-
-              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-6 min-w-[200px] text-center">
-                <div className="text-3xl font-bold text-gray-900">25+</div>
-                <div className="text-sm text-gray-600 mt-1">Years of Excellence</div>
-              </div>
-            </div>
-
-            <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-amber-100 to-yellow-100 px-5 py-2.5 mb-6">
-                <Award className="h-5 w-5 text-amber-600" />
-                <span className="text-sm font-semibold text-amber-800">HERITAGE & CRAFTSMANSHIP</span>
-              </div>
-
-              <h3 className="font-['Playfair_Display'] text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                A Legacy of <span className="text-amber-600">Excellence</span>
-              </h3>
-
-              <p className="mt-6 text-lg text-gray-700 leading-relaxed">
-                For over two decades, Minal Gems has been at the forefront of jewellery
-                craftsmanship, blending traditional techniques with modern innovation.
-                Each piece is a testament to our commitment to quality, beauty, and
-                timeless elegance.
-              </p>
-
-              <div className="mt-8 space-y-5">
-                {[
-                  "Traditional Kundan & Meenakari artistry",
-                  "Modern CAD-assisted precision designs",
-                  "Ethically sourced diamonds & precious gems",
-                  "Lifetime craftsmanship guarantee"
-                ].map((feature, idx) => (
-                  <div key={idx} className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 flex items-center justify-center shadow-md">
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                    </div>
-                    <span className="text-gray-700 text-lg font-medium">{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-12 flex flex-wrap gap-4">
-                <Button
-                  variant="primary"
-                  className="px-8 py-4 text-lg rounded-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-xl"
-                  onClick={() => navigate("/about")}
-                >
-                  Discover Our Story
-                </Button>
-              </div>
-            </div>
+      {/* ────── ABOUT TEASER ────── */}
+      <AnimatedSection className="py-14 bg-gray-50">
+        <Container className="grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <img
+              src="/images/hero/feature.jpg"
+              alt="Craftsmanship"
+              className="rounded-2xl shadow-xl"
+              onError={(e) => (e.target.src = "/images/placeholders/craftsmanship.jpg")}
+            />
           </div>
-        </Container>
-      </AnimatedSection>
-
-      {/* NEWSLETTER SECTION */}
-      <AnimatedSection className="py-16 md:py-20 bg-gradient-to-r from-gray-900 to-gray-800">
-        <Container>
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 shadow-2xl mb-8">
-              <Sparkles className="h-10 w-10 text-white" />
-            </div>
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Be the First to Know
+          <div>
+            <Award className="h-8 w-8 text-amber-600 mb-4" />
+            <h3 className="font-serif text-4xl font-bold text-gray-900 mb-4">
+              A Legacy of <span className="text-amber-600">Excellence</span>
             </h3>
-            <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
-              Subscribe to receive updates on new collections, exclusive offers,
-              and jewellery styling tips.
+            <p className="text-gray-700 mb-6">
+              For over two decades, Minal Gems has blended traditional artistry with modern design.
             </p>
-            <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Your email address"
-                className="flex-1 px-6 py-4 rounded-full border-0 bg-white/10 backdrop-blur-sm text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                className="rounded-full px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600"
-              >
-                Subscribe
-              </Button>
-            </form>
-            <p className="mt-4 text-sm text-white/50">
-              We respect your privacy. Unsubscribe at any time.
-            </p>
+            <Button onClick={() => navigate("/about")} variant="outline" className="rounded-full px-6 py-2">
+              Our Story
+            </Button>
           </div>
         </Container>
       </AnimatedSection>
 
-      {/* Floating action button for mobile */}
-      <div className="fixed bottom-6 right-6 z-40 lg:hidden">
-        <Button
-          variant="primary"
-          className="rounded-full p-4 shadow-2xl shadow-amber-500/30"
-          onClick={() => navigate("/products")}
-        >
-          <span className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-semibold">Shop</span>
-          </span>
+      {/* ────── NEWSLETTER ────── */}
+      <AnimatedSection className="py-14 bg-gray-800 text-white">
+        <Container className="text-center max-w-xl">
+          <Sparkles className="h-8 w-8 mx-auto text-amber-400 mb-4" />
+          <h3 className="text-2xl font-bold mb-2">Stay Updated</h3>
+          <p className="text-white/70 mb-6">Subscribe for exclusive offers and new arrivals.</p>
+          <form className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              placeholder="Your email"
+              className="flex-1 rounded-full px-5 py-3 text-gray-900"
+            />
+            <Button type="submit" variant="primary" className="rounded-full px-6 py-3">Subscribe</Button>
+          </form>
+        </Container>
+      </AnimatedSection>
+
+      {/* Mobile shop button */}
+      <div className="fixed bottom-6 right-6 lg:hidden z-40">
+        <Button onClick={() => navigate("/products")} className="rounded-full p-4 shadow-xl">
+          <Sparkles className="h-5 w-5" />
+          <span className="ml-1 font-semibold">Shop</span>
         </Button>
       </div>
 
-      {/* Custom CSS for animations */}
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
-        }
-      `}</style>
-      <LeadForm
-          isOpen={isLeadFormOpen}
-          onClose={() => setIsLeadFormOpen(false)}
-          // You can optionally pass a default product interest:
-          // productInterest="Featured Collections"
-        />
+      <LeadForm isOpen={isLeadFormOpen} onClose={() => setIsLeadFormOpen(false)} />
     </main>
   );
 }
